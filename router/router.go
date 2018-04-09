@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/sysu-go-online/service-end/controller"
 	"github.com/urfave/negroni"
 )
 
@@ -16,6 +17,9 @@ func GetServer() *negroni.Negroni {
 	static := "static"
 	// Define static service
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(static))))
+
+	// /projects router
+	r.HandleFunc("/projects", controller.CreateProjects).Methods("POST")
 
 	// Use classic server and return it
 	s := negroni.Classic()
