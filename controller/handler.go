@@ -23,7 +23,7 @@ func CreateProjects(w http.ResponseWriter, r *http.Request) {
 		}
 		r.Body.Close()
 		var project Project
-		err = json.Unmarshal(body, project)
+		err = json.Unmarshal(body, &project)
 		if err != nil {
 			panic(err)
 		}
@@ -34,7 +34,14 @@ func CreateProjects(w http.ResponseWriter, r *http.Request) {
 		}
 		// Insert into db
 		dbProject := NewProject(project)
-		dao.InsertProject(dbProject)
+		affected, err := dao.InsertProject(dbProject)
+		if err != nil {
+			panic(err)
+		}
+		if affected == 0 {
+			// Can not add into db
+			w.WriteHeader(400)
+		}
 	} else {
 		// Unauthorized user
 		w.WriteHeader(401)
