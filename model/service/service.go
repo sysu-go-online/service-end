@@ -9,3 +9,11 @@ func InsertProject(project entities.Project) (int64, error){
 	}
 	return affect, err
 }
+
+// find project
+func FindProjectByUserID(userid string) ([]entities.Project, error) {
+	entities.Engine.Id(name)
+	as := []entities.Project{}
+	err := entities.Engine.Where("user_id=?", userid).Find(&as)
+	return as, err
+}

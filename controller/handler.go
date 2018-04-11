@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"github.com/unrolled/render"
 
 	"github.com/sysu-go-online/service-end/controller/service"
 	dao "github.com/sysu-go-online/service-end/model/service"
@@ -45,5 +46,26 @@ func CreateProjects(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Unauthorized user
 		w.WriteHeader(401)
+	}
+}
+
+func GetProjectsID(formatter *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		// Get user token and judge if the token is valid
+	
+		userid := r.Form["userID"]
+		projects, err := dao.FindProjectByUserID(userid);
+
+		if err != nil {
+			// can't use db
+			w.WriteHeader(400)
+		} else {
+			formatter.JSON(w, http.StatusOK, struct {
+				Content []Project `json:"content"`
+			}{
+				Content : projects
+			})
+		}
 	}
 }
