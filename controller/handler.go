@@ -2,11 +2,14 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+
 	"github.com/unrolled/render"
 
 	"github.com/sysu-go-online/service-end/controller/service"
+	"github.com/sysu-go-online/service-end/model/entities"
 	dao "github.com/sysu-go-online/service-end/model/service"
 )
 
@@ -53,19 +56,54 @@ func GetProjectsID(formatter *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		// Get user token and judge if the token is valid
-	
-		userid := r.Form["userID"]
-		projects, err := dao.FindProjectByUserID(userid);
+
+		userid := r.Form.Get("userID")
+		projects, err := dao.FindProjectByUserID(userid)
 
 		if err != nil {
 			// can't use db
 			w.WriteHeader(400)
 		} else {
 			formatter.JSON(w, http.StatusOK, struct {
-				Content []Project `json:"content"`
+				Content []entities.Project `json:"content"`
 			}{
-				Content : projects
-			})
+				Content: projects})
 		}
+	}
+}
+
+func TestGetProjectsID(formatter *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		// Get user token and judge if the token is valid
+		fmt.Println(r.Form.Get("userID"))
+
+		projects := []entities.Project{}
+		projects = append(projects, entities.Project{
+			ProjectName: "p1",
+			ProjectID:   1,
+			UserID:      2,
+			Language:    0,
+		})
+
+		projects = append(projects, entities.Project{
+			ProjectName: "p2",
+			ProjectID:   2,
+			UserID:      2,
+			Language:    1,
+		})
+
+		projects = append(projects, entities.Project{
+			ProjectName: "p3",
+			ProjectID:   3,
+			UserID:      2,
+			Language:    2,
+		})
+
+		formatter.JSON(w, http.StatusOK, struct {
+			Content []entities.Project `json:"content"`
+		}{
+			Content: projects,
+		})
 	}
 }
