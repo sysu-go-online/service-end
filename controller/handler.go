@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"github.com/unrolled/render"
 
 	"github.com/sysu-go-online/service-end/controller/service"
@@ -105,5 +107,30 @@ func TestGetProjectsID(formatter *render.Render) http.HandlerFunc {
 		}{
 			Content: projects,
 		})
+	}
+}
+
+func UpdateFile(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err)
+		w.WriteHeader(500)
+		return
+	}
+
+	// Read project id and file path from uri
+	projectID := vars["projectid"]
+	filePath := vars["filepath"]
+
+	// Check if the file path is valid
+	ok := service.CheckFilePath(filePath)
+
+	if ok {
+		// Save file
+		dao.UpdateFileContent(projectID, filePath, string(body))
+		w.WriteHeader(200)
+	} else {
+		w.WriteHeader(400)
 	}
 }
