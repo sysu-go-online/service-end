@@ -43,3 +43,19 @@ func UpdateFileContent(projectid string, filePath string, content string) {
 		panic(err)
 	}
 }
+
+func GetFileContent(projectid string, filePath string) []byte {
+	// Get absolute path
+	projectName, err := GetProjectNameByID(projectid)
+	if err != nil {
+		panic(err)
+	}
+	absPath := filepath.Join("/home/golang", projectName, filePath)
+
+	// Read file content
+	content, err := ioutil.ReadFile(absPath)
+	if err != nil {
+		panic(err)
+	}
+	return content
+}
