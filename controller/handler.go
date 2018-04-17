@@ -110,7 +110,7 @@ func TestGetProjectsID(formatter *render.Render) http.HandlerFunc {
 	}
 }
 
-func UpdateFile(w http.ResponseWriter, r *http.Request) {
+func UpdateFileHandler(w http.ResponseWriter, r *http.Request) {
 	// Read body
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -136,7 +136,7 @@ func UpdateFile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetFileContent(w http.ResponseWriter, r *http.Request) {
+func GetFileContentHandler(w http.ResponseWriter, r *http.Request) {
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
 	projectID := vars["projectid"]
@@ -152,4 +152,18 @@ func GetFileContent(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(400)
 	}
+}
+
+func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) {
+	// Read project id
+	vars := mux.Vars(r)
+	projectID := vars["projectid"]
+
+	// Get file structure
+	structure := dao.GetFileStructure(projectID)
+	ret, err := json.Marshal(structure)
+	if err != nil {
+		panic(err)
+	}
+	w.Write(ret)
 }
