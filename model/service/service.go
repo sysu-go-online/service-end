@@ -9,6 +9,9 @@ import (
 	"github.com/sysu-go-online/service-end/model/entities"
 )
 
+// ROOT defines the root directory
+var ROOT = "/home/golang/src/github.com"
+
 func InsertProject(project entities.Project) (int64, error) {
 	affect, err := entities.Engine.InsertOne(&project)
 	if err != nil {
@@ -29,28 +32,35 @@ func GetProjectNameByID(projectid string) (string, error){
 	return "test", nil
 }
 
+// UpdateFileContent update content with given filepath and content
 func UpdateFileContent(projectid string, filePath string, content string) {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
 		panic(err)
 	}
-	absPath := filepath.Join("/home/golang", projectName, filePath)
+	absPath := filepath.Join(ROOT, projectName, filePath)
 
-	// Update file
+	// Update file, if the file not exists, create it first
+	dir, _ := filepath.Split(absPath)
+	err = os.MkdirAll(dir, os.ModeAppend)
+	if err != nil {
+		panic(err)
+	}
 	err = ioutil.WriteFile(absPath, []byte(content), os.ModeAppend)
 	if err != nil {
 		panic(err)
 	}
 }
 
+// GetFileContent returns required file content
 func GetFileContent(projectid string, filePath string) []byte {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
 		panic(err)
 	}
-	absPath := filepath.Join("/home/golang", projectName, filePath)
+	absPath := filepath.Join(ROOT, projectName, filePath)
 
 	// Read file content
 	content, err := ioutil.ReadFile(absPath)
