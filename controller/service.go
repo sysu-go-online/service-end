@@ -25,7 +25,15 @@ func initDockerConnection(msg string) *websocket.Conn {
 // DialDockerService create connection between web server and docker server
 func dialDockerService() *websocket.Conn {
 	// Set up websocket connection
-	dockerAddr := "localhost:8081"
+	dockerAddr := os.Getenv("DOCKER_ADDRESS")
+	dockerPort := os.Getenv("DOCKER_PORT")
+	if len(dockerAddr) == 0 {
+		dockerAddr = "localhost"
+	}
+	if len(dockerPort) == 0 {
+		dockerPort = "8888"
+	}
+	dockerAddr = dockerAddr + dockerPort
 	url := url.URL{Scheme: "ws", Host: dockerAddr, Path: "/"}
 	conn, _, err := websocket.DefaultDialer.Dial(url.String(), nil)
 	if err != nil {

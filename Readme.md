@@ -9,6 +9,8 @@
 - DATABASE_ADDRESS 数据库地址，默认为localhost
 - DATABASE_PORT 数据库端口，默认为3306
 - DEVELOP 是否为开发环境，默认为false
+- DOCKER_ADDRESS 容器服务地址，默认为localhost
+- DOCKER_PORT 容器服务端口，默认为8888
 
 ## 依赖的外部软件
 
