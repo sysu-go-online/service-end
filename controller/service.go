@@ -15,14 +15,11 @@ func checkFilePath(path string) bool {
 // InitDockerConnection inits the connection to the docker service with the first message received from client
 func initDockerConnection(msg string) *websocket.Conn {
 	// Just handle command start with `go`
-	if len(msg) > 3 && msg[0:3] == "go " {
-		conn := dialDockerService()
-		if conn == nil {
-			return nil
-		}
-		return conn
+	conn := dialDockerService()
+	if conn == nil {
+		return nil
 	}
-	return nil
+	return conn
 }
 
 // DialDockerService create connection between web server and docker server

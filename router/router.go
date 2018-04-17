@@ -29,6 +29,7 @@ func GetServer() *negroni.Negroni {
 	r.HandleFunc("/{projectid}/tree/{filepath:.*}", controller.UpdateFileHandler).Methods("POST")
 	r.HandleFunc("/{projectid}/tree/{filepath:.*}", controller.GetFileContentHandler).Methods("GET")
 	r.HandleFunc("/{projectid}", controller.GetFileStructureHandler).Methods("GET")
+	r.HandleFunc("/ws", controller.WebSocketTermHandler)
 
 	// Use classic server and return it
 	s := negroni.Classic()
