@@ -9,18 +9,16 @@ import (
 	"github.com/gorilla/websocket"
 
 	dao "github.com/sysu-go-online/service-end/model/service"
-	"github.com/sysu-go-online/service-end/tools"
 )
 
 var upgrader = websocket.Upgrader{}
 
 // UpdateFileHandler is a handler for update file
-func UpdateFileHandler(w http.ResponseWriter, r *http.Request) {
+func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read body
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		tools.HandlerError(w, err, "Can not read user message", 400)
-		return
+		return err
 	}
 
 	// Read project id and file path from uri
@@ -35,16 +33,17 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) {
 		// Save file
 		err := dao.UpdateFileContent(projectID, filePath, string(body))
 		if err != nil {
-			tools.HandlerError(w, err, "Can not update file content", 500)
+			return err
 		}
 		w.WriteHeader(200)
 	} else {
 		w.WriteHeader(400)
 	}
+	return nil
 }
 
 // GetFileContentHandler is a handler for read file content
-func GetFileContentHandler(w http.ResponseWriter, r *http.Request) {
+func GetFileContentHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
 	projectID := vars["projectid"]
@@ -56,17 +55,18 @@ func GetFileContentHandler(w http.ResponseWriter, r *http.Request) {
 		// Load file
 		content, err := dao.GetFileContent(projectID, filePath)
 		if err != nil {
-			tools.HandlerError(w, err, "Can not read content", 500)
+			return err
 		}
 		w.WriteHeader(200)
 		w.Write(content)
 	} else {
 		w.WriteHeader(400)
 	}
+	return nil
 }
 
 // GetFileStructureHandler is handler for get project structure
-func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) {
+func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id
 	vars := mux.Vars(r)
 	projectID := vars["projectid"]
@@ -74,13 +74,14 @@ func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) {
 	// Get file structure
 	structure, err := dao.GetFileStructure(projectID)
 	if err != nil {
-		tools.HandlerError(w, err, "Can not get required file structure", 500)
+		return err
 	}
 	ret, err := json.Marshal(structure)
 	if err != nil {
-		tools.HandlerError(w, err, "Can not marshal json to string", 500)
+		return err
 	}
 	w.Write(ret)
+	return nil
 }
 
 // WebSocketTermHandler is a middle way handler to connect web app with docker service
@@ -90,7 +91,7 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	msgType := websocket.TextMessage
 	clientMsg := make(chan []byte)
 	if err != nil {
-		tools.HandlerError(w, err, "Can not upgrade http connection to ws", 500)
+		return
 	}
 	defer ws.Close()
 
