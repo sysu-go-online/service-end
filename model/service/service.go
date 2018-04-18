@@ -1,10 +1,9 @@
 package service
 
 import (
-	"os"
 	"io/ioutil"
+	"os"
 	"path/filepath"
-	"fmt"
 
 	"github.com/sysu-go-online/service-end/model/entities"
 )
@@ -12,23 +11,8 @@ import (
 // ROOT defines the root directory
 var ROOT = "/home/golang/src/github.com"
 
-func InsertProject(project entities.Project) (int64, error) {
-	affect, err := entities.Engine.InsertOne(&project)
-	if err != nil {
-		return 0, err
-	}
-	return affect, err
-}
-
-// FindProjectByUserID : find project
-func FindProjectByUserID(userid string) ([]entities.Project, error) {
-	fmt.Printf("Enter?\n")
-	as := []entities.Project{}
-	err := entities.Engine.Where("user_id=?", userid).Find(&as)
-	return as, err
-}
-
-func GetProjectNameByID(projectid string) (string, error){
+// GetProjectNameByID return project according to the given id
+func GetProjectNameByID(id string) (string, error) {
 	return "test", nil
 }
 
@@ -70,20 +54,21 @@ func GetFileContent(projectid string, filePath string) []byte {
 	return content
 }
 
-func GetFileStructure(projectid string) []entities.FileStructure{
+// GetFileStructure read file structure and return it
+func GetFileStructure(projectid string) []entities.FileStructure {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
 		panic(err)
 	}
-	absPath := filepath.Join("/home/golang", projectName)
+	absPath := filepath.Join(ROOT, projectName)
 
 	// Recurisively get file structure
 	return dfs(absPath)
-	
+
 }
 
-func dfs(path string) []entities.FileStructure{
+func dfs(path string) []entities.FileStructure {
 	var structure []entities.FileStructure
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -91,8 +76,8 @@ func dfs(path string) []entities.FileStructure{
 	}
 	for _, file := range files {
 		tmp := entities.FileStructure{
-			ID: 1,
-			Name: file.Name(),
+			ID:         1,
+			Name:       file.Name(),
 			EditStatus: 0,
 		}
 		if file.IsDir() {
