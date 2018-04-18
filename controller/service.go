@@ -13,17 +13,17 @@ func checkFilePath(path string) bool {
 }
 
 // InitDockerConnection inits the connection to the docker service with the first message received from client
-func initDockerConnection(msg string) *websocket.Conn {
+func initDockerConnection(msg string) (*websocket.Conn, error) {
 	// Just handle command start with `go`
-	conn := dialDockerService()
-	if conn == nil {
-		return nil
+	conn, err := dialDockerService()
+	if err != nil {
+		return nil, err
 	}
-	return conn
+	return conn, nil
 }
 
 // DialDockerService create connection between web server and docker server
-func dialDockerService() *websocket.Conn {
+func dialDockerService() (*websocket.Conn, error) {
 	// Set up websocket connection
 	dockerAddr := os.Getenv("DOCKER_ADDRESS")
 	dockerPort := os.Getenv("DOCKER_PORT")
@@ -37,14 +37,13 @@ func dialDockerService() *websocket.Conn {
 	url := url.URL{Scheme: "ws", Host: dockerAddr, Path: "/"}
 	conn, _, err := websocket.DefaultDialer.Dial(url.String(), nil)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Can not dial docker websocket service")
-		return nil
+		return nil, err
 	}
-	return conn
+	return conn, nil
 }
 
 // HandleMessage decide different operation according to the given json message
-func handleMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool) {
+func handleMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool) error {
 	var workSpace *Command
 	var err error
 	if isFirst {
@@ -69,9 +68,9 @@ func handleMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool) {
 		err = conn.WriteMessage(mType, msg)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Can not write message to connection")
-		return
+		return err
 	}
+	return nil
 }
 
 // ReadFromClient receive message from client connection
@@ -94,32 +93,37 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 }
 
 // HandlerClientMsg handle message from client and send it to docker service
-func handlerClientMsg(isFirst *bool, ws *websocket.Conn, msgType int, msg []byte) {
+func handlerClientMsg(isFirst *bool, ws *websocket.Conn, msgType int, msg []byte) error {
 	var conn *websocket.Conn
 	// Init the connection to the docker serveice
 	if *isFirst {
-		conn = initDockerConnection(string(msg))
+		conn, err := initDockerConnection(string(msg))
+		if err != nil {
+			return err
+		}
 		if conn == nil {
 			fmt.Fprintf(os.Stderr, "Invalid command.")
 			ws.WriteMessage(msgType, []byte("Invalid Command"))
-			return
+			return nil
 		}
 		// Listen message from docker service and send to client connection
 		go sendMsgToClient(ws, conn)
 	}
 
 	// Send message to docker service
-	handleMessage(msgType, msg, conn, *isFirst)
+	err := handleMessage(msgType, msg, conn, *isFirst)
+	if err != nil {
+		return err
+	}
 	*isFirst = false
+	return nil
 }
 
 // SendMsgToClient send message to client
 func sendMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
-	// defer sConn.Close()
 	for {
 		mType, msg, err := sConn.ReadMessage()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Can not read message from connection")
 			return
 		}
 		cConn.WriteMessage(mType, msg)

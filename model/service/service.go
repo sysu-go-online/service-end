@@ -17,11 +17,11 @@ func GetProjectNameByID(id string) (string, error) {
 }
 
 // UpdateFileContent update content with given filepath and content
-func UpdateFileContent(projectid string, filePath string, content string) {
+func UpdateFileContent(projectid string, filePath string, content string) error{
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	absPath := filepath.Join(ROOT, projectName, filePath)
 
@@ -29,37 +29,38 @@ func UpdateFileContent(projectid string, filePath string, content string) {
 	dir, _ := filepath.Split(absPath)
 	err = os.MkdirAll(dir, os.ModeAppend)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	err = ioutil.WriteFile(absPath, []byte(content), os.ModeAppend)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 // GetFileContent returns required file content
-func GetFileContent(projectid string, filePath string) []byte {
+func GetFileContent(projectid string, filePath string) ([]byte, error) {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	absPath := filepath.Join(ROOT, projectName, filePath)
 
 	// Read file content
 	content, err := ioutil.ReadFile(absPath)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return content
+	return content, nil
 }
 
 // GetFileStructure read file structure and return it
-func GetFileStructure(projectid string) []entities.FileStructure {
+func GetFileStructure(projectid string) ([]entities.FileStructure, error) {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	absPath := filepath.Join(ROOT, projectName)
 
@@ -68,11 +69,11 @@ func GetFileStructure(projectid string) []entities.FileStructure {
 
 }
 
-func dfs(path string) []entities.FileStructure {
+func dfs(path string) ([]entities.FileStructure, error){
 	var structure []entities.FileStructure
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	for _, file := range files {
 		tmp := entities.FileStructure{
@@ -83,11 +84,14 @@ func dfs(path string) []entities.FileStructure {
 		if file.IsDir() {
 			tmp.Type = "dir"
 			nextPath := filepath.Join(path, file.Name())
-			tmp.Children = dfs(nextPath)
+			tmp.Children, err = dfs(nextPath)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			tmp.Type = "file"
 		}
 		structure = append(structure, tmp)
 	}
-	return structure
+	return structure, nil
 }
