@@ -43,30 +43,24 @@ func dialDockerService() (*websocket.Conn, error) {
 }
 
 // HandleMessage decide different operation according to the given json message
-func handleMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool) error {
+func handleMessage(mType int, msg []byte, conn *websocket.Conn) error {
 	var workSpace *Command
 	var err error
-	if isFirst {
-		pwd := getPwd("test")
-		var env []string
-		entrypoint := make([]string, 1) // Set `/go` as default entrypoint
-		entrypoint[0] = "/go"
-		username := "test"
-		workSpace = &Command{
-			Command:    string(msg),
-			Entrypoint: entrypoint,
-			PWD:        pwd,
-			ENV:        env,
-			UserName:   username,
-		}
+	pwd := getPwd("test")
+	var env []string
+	entrypoint := make([]string, 1) // Set `/go` as default entrypoint
+	entrypoint[0] = "/go"
+	username := "test"
+	workSpace = &Command{
+		Command:    string(msg),
+		Entrypoint: entrypoint,
+		PWD:        pwd,
+		ENV:        env,
+		UserName:   username,
 	}
 
 	// Send message
-	if isFirst {
-		err = conn.WriteJSON(*workSpace)
-	} else {
-		err = conn.WriteMessage(mType, msg)
-	}
+	err = conn.WriteJSON(*workSpace)
 	if err != nil {
 		return err
 	}
@@ -111,7 +105,7 @@ func handlerClientMsg(isFirst *bool, ws *websocket.Conn, msgType int, msg []byte
 	}
 
 	// Send message to docker service
-	err := handleMessage(msgType, msg, conn, *isFirst)
+	err := handleMessage(msgType, msg, conn)
 	if err != nil {
 		return err
 	}

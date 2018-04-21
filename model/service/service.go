@@ -66,8 +66,9 @@ func GetFileStructure(projectid string) ([]entities.FileStructure, error) {
 
 	// Recurisively get file structure
 	return dfs(absPath)
-
 }
+
+var id = 1
 
 func dfs(path string) ([]entities.FileStructure, error){
 	var structure []entities.FileStructure
@@ -77,10 +78,11 @@ func dfs(path string) ([]entities.FileStructure, error){
 	}
 	for _, file := range files {
 		tmp := entities.FileStructure{
-			ID:         1,
+			ID:         id,
 			Name:       file.Name(),
 			EditStatus: 0,
 		}
+		id++
 		if file.IsDir() {
 			tmp.Type = "dir"
 			nextPath := filepath.Join(path, file.Name())
