@@ -48,17 +48,16 @@ func handleMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool) er
 	var workSpace *Command
 	var err error
 	if isFirst {
-		pwd := getPwd("test")
-		var env []string
-		entrypoint := make([]string, 1) // Set `/go` as default entrypoint
-		entrypoint[0] = "/go"
-		username := "test"
+		projectName := "test"
+		username := "golang"
+		pwd := getPwd(projectName, username)
+		env := getEnv(projectName, username)
 		workSpace = &Command{
-			Command:    string(msg),
-			Entrypoint: entrypoint,
-			PWD:        pwd,
-			ENV:        env,
-			UserName:   username,
+			Command:     string(msg),
+			PWD:         pwd,
+			ENV:         env,
+			UserName:    username,
+			ProjectName: projectName,
 		}
 	}
 
@@ -127,8 +126,15 @@ func sendMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
 	}
 }
 
-// GetPwd return current path of given username
-func getPwd(username string) string {
+// getPwd return current path of given username
+func getPwd(projectName string, username string) string {
 	// Return user root in test version
 	return "/"
+}
+
+func getEnv(projectName string, username string) []string {
+	env := []string{}
+	env = append(env, "GOPATH")
+	env = append(env, "/home/golang")
+	return env
 }
