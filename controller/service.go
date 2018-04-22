@@ -43,24 +43,30 @@ func dialDockerService() (*websocket.Conn, error) {
 }
 
 // HandleMessage decide different operation according to the given json message
-func handleMessage(mType int, msg []byte, conn *websocket.Conn) error {
+func handleMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool) error {
 	var workSpace *Command
 	var err error
-	pwd := getPwd("test")
-	var env []string
-	entrypoint := make([]string, 1) // Set `/go` as default entrypoint
-	entrypoint[0] = "/go"
-	username := "test"
-	workSpace = &Command{
-		Command:    string(msg),
-		Entrypoint: entrypoint,
-		PWD:        pwd,
-		ENV:        env,
-		UserName:   username,
+	if isFirst {
+		pwd := getPwd("test")
+		var env []string
+		entrypoint := make([]string, 1) // Set `/go` as default entrypoint
+		entrypoint[0] = "/go"
+		username := "test"
+		workSpace = &Command{
+			Command:    string(msg),
+			Entrypoint: entrypoint,
+			PWD:        pwd,
+			ENV:        env,
+			UserName:   username,
+		}
 	}
 
 	// Send message
-	err = conn.WriteJSON(*workSpace)
+	if isFirst {
+		err = conn.WriteJSON(*workSpace)
+	} else {
+		err = conn.WriteMessage(mType, msg)
+	}
 	if err != nil {
 		return err
 	}
@@ -87,30 +93,26 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 }
 
 // HandlerClientMsg handle message from client and send it to docker service
-func handlerClientMsg(isFirst *bool, ws *websocket.Conn, msgType int, msg []byte) error {
+func handlerClientMsg(isFirst *bool, ws *websocket.Conn, msgType int, msg []byte) {
 	var conn *websocket.Conn
 	// Init the connection to the docker serveice
 	if *isFirst {
 		conn, err := initDockerConnection(string(msg))
 		if err != nil {
-			return err
+			panic(err)
 		}
 		if conn == nil {
 			fmt.Fprintf(os.Stderr, "Invalid command.")
 			ws.WriteMessage(msgType, []byte("Invalid Command"))
-			return nil
+			return
 		}
 		// Listen message from docker service and send to client connection
 		go sendMsgToClient(ws, conn)
 	}
 
 	// Send message to docker service
-	err := handleMessage(msgType, msg, conn)
-	if err != nil {
-		return err
-	}
+	handleMessage(msgType, msg, conn, *isFirst)
 	*isFirst = false
-	return nil
 }
 
 // SendMsgToClient send message to client

@@ -91,7 +91,7 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	msgType := websocket.TextMessage
 	clientMsg := make(chan []byte)
 	if err != nil {
-		return
+		panic(err)
 	}
 	defer ws.Close()
 
@@ -101,9 +101,6 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	// Handle messages from the channel
 	isFirst := true
 	for msg := range clientMsg {
-		err := handlerClientMsg(&isFirst, ws, msgType, msg)
-		if err != nil {
-			return
-		}
+		handlerClientMsg(&isFirst, ws, msgType, msg)
 	}
 }
