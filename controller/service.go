@@ -33,6 +33,7 @@ func dialDockerService() (*websocket.Conn, error) {
 	if len(dockerPort) == 0 {
 		dockerPort = "8888"
 	}
+	dockerPort = ":" + dockerPort
 	dockerAddr = dockerAddr + dockerPort
 	url := url.URL{Scheme: "ws", Host: dockerAddr, Path: "/"}
 	conn, _, err := websocket.DefaultDialer.Dial(url.String(), nil)

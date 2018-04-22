@@ -13,6 +13,7 @@ type Command struct {
 	UserName   string   `json:"user"`
 }
 
+// ErrorHandler is error handler for http
 type ErrorHandler func(w http.ResponseWriter, r *http.Request) error
 
 func (h ErrorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
