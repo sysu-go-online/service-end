@@ -21,3 +21,19 @@
 ## 运行方式
 
 `go run main`
+
+## 测试版本相关说明
+
+- 根目录
+
+  每个用户根目录始终为/home/username/
+
+  每个项目根目录始终为/home/username/src/github.com/projectname
+
+- 用户
+
+  默认全局用户名为golang
+
+- 项目
+
+  默认全局项目名为test
