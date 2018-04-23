@@ -11,12 +11,6 @@ import (
 	dao "github.com/sysu-go-online/service-end/model/service"
 )
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
 // UpdateFileHandler is a handler for update file
 func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read body
@@ -162,7 +156,7 @@ func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) error {
 
 // WebSocketTermHandler is a middle way handler to connect web app with docker service
 func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
 	// Set TextMessage as default
 	msgType := websocket.TextMessage
 	clientMsg := make(chan []byte)
