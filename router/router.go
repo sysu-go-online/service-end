@@ -28,6 +28,8 @@ func GetServer() *negroni.Negroni {
 	// file router
 	r.Handle("/{projectid}/tree/{filepath:.*}", controller.ErrorHandler(controller.UpdateFileHandler)).Methods("POST")
 	r.Handle("/{projectid}/tree/{filepath:.*}", controller.ErrorHandler(controller.GetFileContentHandler)).Methods("GET")
+	r.Handle("/{projectid}/tree/{filepath:.*}", controller.ErrorHandler(controller.CreateFileHandler)).Methods("PUT")
+	r.Handle("/{projectid}/tree/{filepath:.*}", controller.ErrorHandler(controller.DeleteFileHandler)).Methods("DELETE")
 	r.Handle("/{projectid}", controller.ErrorHandler(controller.GetFileStructureHandler)).Methods("GET")
 	r.HandleFunc("/ws", controller.WebSocketTermHandler)
 

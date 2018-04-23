@@ -17,7 +17,7 @@ func GetProjectNameByID(id string) (string, error) {
 }
 
 // UpdateFileContent update content with given filepath and content
-func UpdateFileContent(projectid string, filePath string, content string) error{
+func UpdateFileContent(projectid string, filePath string, content string, create bool) error {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
@@ -25,17 +25,30 @@ func UpdateFileContent(projectid string, filePath string, content string) error{
 	}
 	absPath := filepath.Join(ROOT, projectName, filePath)
 
-	// Update file, if the file not exists, create it first
-	dir, _ := filepath.Split(absPath)
-	err = os.MkdirAll(dir, os.ModeAppend)
-	if err != nil {
-		return err
+	// Update file, if the file not exists, judge accroding to the given param
+	if create {
+		dir, _ := filepath.Split(absPath)
+		err = os.MkdirAll(dir, os.ModeAppend)
+		if err != nil {
+			return err
+		}
 	}
 	err = ioutil.WriteFile(absPath, []byte(content), os.ModeAppend)
+	return err
+}
+
+// DeleteFile delete file accroding to the given path
+func DeleteFile(projectid string, filePath string) error {
+	// Get absolute path
+	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
 		return err
 	}
-	return nil
+	absPath := filepath.Join(ROOT, projectName, filePath)
+
+	// Delete file
+	err = os.Remove(absPath)
+	return err
 }
 
 // GetFileContent returns required file content
@@ -70,7 +83,7 @@ func GetFileStructure(projectid string) ([]entities.FileStructure, error) {
 
 var id = 1
 
-func dfs(path string) ([]entities.FileStructure, error){
+func dfs(path string) ([]entities.FileStructure, error) {
 	var structure []entities.FileStructure
 	files, err := ioutil.ReadDir(path)
 	if err != nil {

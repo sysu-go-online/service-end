@@ -31,7 +31,30 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectID, filePath, string(body))
+		err := dao.UpdateFileContent(projectID, filePath, string(body), false)
+		if err != nil {
+			return err
+		}
+		w.WriteHeader(200)
+	} else {
+		w.WriteHeader(400)
+	}
+	return nil
+}
+
+// CreateFileHandler is a handler for create file
+func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
+	// Read project id and file path from uri
+	vars := mux.Vars(r)
+	projectID := vars["projectid"]
+	filePath := vars["filepath"]
+
+	// Check if the file path is valid
+	ok := checkFilePath(filePath)
+
+	if ok {
+		// Save file
+		err := dao.UpdateFileContent(projectID, filePath, "", true)
 		if err != nil {
 			return err
 		}
@@ -59,6 +82,28 @@ func GetFileContentHandler(w http.ResponseWriter, r *http.Request) error {
 		}
 		w.WriteHeader(200)
 		w.Write(content)
+	} else {
+		w.WriteHeader(400)
+	}
+	return nil
+}
+
+// GetFileContentHandler is a handler for read file content
+func DeleteFileHandler(w http.ResponseWriter, r *http.Request) error {
+	// Read project id and file path from uri
+	vars := mux.Vars(r)
+	projectID := vars["projectid"]
+	filePath := vars["filepath"]
+
+	// Check if the file path is valid
+	ok := checkFilePath(filePath)
+	if ok {
+		// Load file
+		err := dao.DeleteFile(projectID, filePath)
+		if err != nil {
+			return err
+		}
+		w.WriteHeader(200)
 	} else {
 		w.WriteHeader(400)
 	}
