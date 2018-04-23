@@ -54,7 +54,7 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 	}
 	// Judge if it is dir from body
 	isDir := IsDir{}
-	err = json.Unmarshal(body, isDir)
+	err = json.Unmarshal(body, &isDir)
 	if err != nil {
 		return err
 	}
