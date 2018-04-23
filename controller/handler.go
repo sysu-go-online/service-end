@@ -132,6 +132,17 @@ func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) error {
 	vars := mux.Vars(r)
 	projectID := vars["projectid"]
 
+	// Handle ws connection here
+	if projectID == "ws" {
+		WebSocketTermHandler(w, r)
+		return nil
+	}
+
+	// Only accept GET method request
+	if r.Method != "GET" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return nil
+	}
 	// Get file structure
 	structure, err := dao.GetFileStructure(projectID)
 	if err != nil {
