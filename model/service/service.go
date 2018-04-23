@@ -17,7 +17,7 @@ func GetProjectNameByID(id string) (string, error) {
 }
 
 // UpdateFileContent update content with given filepath and content
-func UpdateFileContent(projectid string, filePath string, content string, create bool) error {
+func UpdateFileContent(projectid string, filePath string, content string, create bool, dir bool) error {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
@@ -27,13 +27,14 @@ func UpdateFileContent(projectid string, filePath string, content string, create
 
 	// Update file, if the file not exists, judge accroding to the given param
 	if create {
-		dir, _ := filepath.Split(absPath)
-		err = os.MkdirAll(dir, os.ModeAppend)
-		if err != nil {
-			return err
+		if dir {
+			err = os.Mkdir(filePath, os.ModeAppend)
+		} else {
+			err = ioutil.WriteFile(absPath, []byte(content), os.ModeAppend)
 		}
+	} else {
+		err = ioutil.WriteFile(absPath, []byte(content), os.ModeAppend)
 	}
-	err = ioutil.WriteFile(absPath, []byte(content), os.ModeAppend)
 	return err
 }
 

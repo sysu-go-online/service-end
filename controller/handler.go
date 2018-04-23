@@ -31,7 +31,7 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectID, filePath, string(body), false)
+		err := dao.UpdateFileContent(projectID, filePath, string(body), false, false)
 		if err != nil {
 			return err
 		}
@@ -44,6 +44,22 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 // CreateFileHandler is a handler for create file
 func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
+	// Read body
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	type IsDir struct {
+		dir bool
+	}
+	// Judge if it is dir from body
+	isDir := IsDir{}
+	err = json.Unmarshal(body, isDir)
+	if err != nil {
+		return err
+	}
+	dir := isDir.dir
+
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
 	projectID := vars["projectid"]
@@ -54,7 +70,7 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectID, filePath, "", true)
+		err := dao.UpdateFileContent(projectID, filePath, "", true, dir)
 		if err != nil {
 			return err
 		}
