@@ -11,7 +11,11 @@ import (
 	dao "github.com/sysu-go-online/service-end/model/service"
 )
 
-var upgrader = websocket.Upgrader{}
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 // UpdateFileHandler is a handler for update file
 func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
