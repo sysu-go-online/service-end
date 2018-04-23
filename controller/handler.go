@@ -170,7 +170,8 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Handle messages from the channel
 	isFirst := true
+	var sConn *websocket.Conn
 	for msg := range clientMsg {
-		handlerClientMsg(&isFirst, ws, msgType, msg)
+		handlerClientMsg(&isFirst, ws, sConn, msgType, msg)
 	}
 }

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"path/filepath"
 	"fmt"
 	"net/url"
 	"os"
@@ -88,31 +89,30 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 			fmt.Fprintln(os.Stderr, "Can not read message.")
 			return
 		}
-		fmt.Println(string(b))
 		clientChan <- b
 	}
 }
 
 // HandlerClientMsg handle message from client and send it to docker service
-func handlerClientMsg(isFirst *bool, ws *websocket.Conn, msgType int, msg []byte) {
-	var conn *websocket.Conn
+func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte) {
 	// Init the connection to the docker serveice
 	if *isFirst {
-		conn, err := initDockerConnection(string(msg))
+		tmpConn, err := initDockerConnection(string(msg))
+		sConn = tmpConn
 		if err != nil {
 			panic(err)
 		}
-		if conn == nil {
+		if sConn == nil {
 			fmt.Fprintf(os.Stderr, "Invalid command.")
 			ws.WriteMessage(msgType, []byte("Invalid Command"))
 			return
 		}
 		// Listen message from docker service and send to client connection
-		go sendMsgToClient(ws, conn)
+		go sendMsgToClient(ws, sConn)
 	}
 
 	// Send message to docker service
-	handleMessage(msgType, msg, conn, *isFirst)
+	handleMessage(msgType, msg, sConn, *isFirst)
 	*isFirst = false
 }
 
@@ -123,6 +123,7 @@ func sendMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
 		if err != nil {
 			return
 		}
+		fmt.Print(string(msg))
 		cConn.WriteMessage(mType, msg)
 	}
 }
@@ -130,12 +131,12 @@ func sendMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
 // getPwd return current path of given username
 func getPwd(projectName string, username string) string {
 	// Return user root in test version
-	return "/"
+	return ""
 }
 
 func getEnv(projectName string, username string) []string {
 	env := []string{}
 	env = append(env, "GOPATH")
-	env = append(env, "/home/golang")
+	env = append(env, filepath.Join("/go", "src"))
 	return env
 }
