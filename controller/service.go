@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"path/filepath"
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 
 	"github.com/gorilla/websocket"
 )
@@ -89,6 +89,7 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 			fmt.Fprintln(os.Stderr, "Can not read message.")
 			return
 		}
+		fmt.Println(string(b))
 		clientChan <- b
 	}
 }
@@ -121,9 +122,11 @@ func sendMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
 	for {
 		mType, msg, err := sConn.ReadMessage()
 		if err != nil {
+			// Server closed connection
+			fmt.Fprintln(os.Stderr, "Docker service closed the connection")
+			cConn.Close()
 			return
 		}
-		fmt.Print(string(msg))
 		cConn.WriteMessage(mType, msg)
 	}
 }
