@@ -48,7 +48,7 @@ func DeleteFile(projectid string, filePath string) error {
 	absPath := filepath.Join(ROOT, projectName, filePath)
 
 	// Delete file
-	err = os.Remove(absPath)
+	err = os.RemoveAll(absPath)
 	return err
 }
 
