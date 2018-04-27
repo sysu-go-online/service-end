@@ -11,6 +11,8 @@ import (
 	dao "github.com/sysu-go-online/service-end/model/service"
 )
 
+var username = "golang"
+
 // UpdateFileHandler is a handler for update file
 func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read body
@@ -29,7 +31,7 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectID, filePath, string(body), false, false)
+		err := dao.UpdateFileContent(projectID, username, filePath, string(body), false, false)
 		if err != nil {
 			return err
 		}
@@ -68,7 +70,7 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectID, filePath, "", true, dir)
+		err := dao.UpdateFileContent(projectID, username, filePath, "", true, dir)
 		if err != nil {
 			return err
 		}
@@ -90,7 +92,7 @@ func GetFileContentHandler(w http.ResponseWriter, r *http.Request) error {
 	ok := checkFilePath(filePath)
 	if ok {
 		// Load file
-		content, err := dao.GetFileContent(projectID, filePath)
+		content, err := dao.GetFileContent(projectID, username, filePath)
 		if err != nil {
 			return err
 		}
@@ -113,7 +115,7 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) error {
 	ok := checkFilePath(filePath)
 	if ok {
 		// Load file
-		err := dao.DeleteFile(projectID, filePath)
+		err := dao.DeleteFile(projectID, username, filePath)
 		if err != nil {
 			return err
 		}
@@ -142,7 +144,7 @@ func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	// Get file structure
-	structure, err := dao.GetFileStructure(projectID)
+	structure, err := dao.GetFileStructure(projectID, username)
 	if err != nil {
 		return err
 	}

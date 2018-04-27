@@ -9,7 +9,7 @@ import (
 )
 
 // ROOT defines the root directory
-var ROOT = "/home/golang/src/github.com"
+var ROOT = "/home"
 
 // GetProjectNameByID return project according to the given id
 func GetProjectNameByID(id string) (string, error) {
@@ -17,13 +17,13 @@ func GetProjectNameByID(id string) (string, error) {
 }
 
 // UpdateFileContent update content with given filepath and content
-func UpdateFileContent(projectid string, filePath string, content string, create bool, dir bool) error {
+func UpdateFileContent(projectid string, username string, filePath string, content string, create bool, dir bool) error {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
 		return err
 	}
-	absPath := filepath.Join(ROOT, projectName, filePath)
+	absPath := filepath.Join(ROOT, username, "src/github.com", projectName, filePath)
 
 	// Update file, if the file not exists, judge accroding to the given param
 	if create {
@@ -39,13 +39,13 @@ func UpdateFileContent(projectid string, filePath string, content string, create
 }
 
 // DeleteFile delete file accroding to the given path
-func DeleteFile(projectid string, filePath string) error {
+func DeleteFile(projectid string, username string, filePath string) error {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
 		return err
 	}
-	absPath := filepath.Join(ROOT, projectName, filePath)
+	absPath := filepath.Join(ROOT, username, "src/github.com", projectName, filePath)
 
 	// Delete file
 	err = os.RemoveAll(absPath)
@@ -53,13 +53,13 @@ func DeleteFile(projectid string, filePath string) error {
 }
 
 // GetFileContent returns required file content
-func GetFileContent(projectid string, filePath string) ([]byte, error) {
+func GetFileContent(projectid string, username string, filePath string) ([]byte, error) {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
 		return nil, err
 	}
-	absPath := filepath.Join(ROOT, projectName, filePath)
+	absPath := filepath.Join(ROOT, username, "src/github.com", projectName, filePath)
 
 	// Read file content
 	content, err := ioutil.ReadFile(absPath)
@@ -70,13 +70,13 @@ func GetFileContent(projectid string, filePath string) ([]byte, error) {
 }
 
 // GetFileStructure read file structure and return it
-func GetFileStructure(projectid string) ([]entities.FileStructure, error) {
+func GetFileStructure(projectid string, username string) ([]entities.FileStructure, error) {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
 		return nil, err
 	}
-	absPath := filepath.Join(ROOT, projectName)
+	absPath := filepath.Join(ROOT, username, "src/github.com", projectName)
 
 	// Recurisively get file structure
 	return dfs(absPath)
