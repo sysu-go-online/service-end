@@ -177,7 +177,6 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	for msg := range clientMsg {
 		conn := handlerClientMsg(&isFirst, ws, sConn, msgType, msg)
 		sConn = conn
-		fmt.Println(sConn)
 	}
 	sConn.Close()
 }

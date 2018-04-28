@@ -89,7 +89,6 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 			fmt.Fprintln(os.Stderr, "Can not read message.")
 			return
 		}
-		fmt.Println(string(b))
 		clientChan <- b
 	}
 }
