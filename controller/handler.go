@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -175,6 +176,7 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	var sConn *websocket.Conn
 	for msg := range clientMsg {
 		handlerClientMsg(&isFirst, ws, sConn, msgType, msg)
+		fmt.Println(sConn)
 	}
 	sConn.Close()
 }
