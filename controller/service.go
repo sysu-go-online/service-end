@@ -95,11 +95,10 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 }
 
 // HandlerClientMsg handle message from client and send it to docker service
-func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte) {
+func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte) (conn *websocket.Conn){
 	// Init the connection to the docker serveice
 	if *isFirst {
-		tmpConn, err := initDockerConnection(string(msg))
-		sConn = tmpConn
+		sConn, err := initDockerConnection(string(msg))
 		if err != nil {
 			panic(err)
 		}
@@ -110,12 +109,16 @@ func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, 
 	if sConn == nil {
 		fmt.Fprintf(os.Stderr, "Invalid command.")
 		ws.WriteMessage(msgType, []byte("Invalid Command"))
+		ws.Close()
+		conn = nil
 		return
 	}
 
 	// Send message to docker service
 	handleMessage(msgType, msg, sConn, *isFirst)
 	*isFirst = false
+	conn = sConn
+	return
 }
 
 // SendMsgToClient send message to client
