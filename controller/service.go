@@ -103,13 +103,14 @@ func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, 
 		if err != nil {
 			panic(err)
 		}
-		if sConn == nil {
-			fmt.Fprintf(os.Stderr, "Invalid command.")
-			ws.WriteMessage(msgType, []byte("Invalid Command"))
-			return
-		}
 		// Listen message from docker service and send to client connection
 		go sendMsgToClient(ws, sConn)
+	}
+	
+	if sConn == nil {
+		fmt.Fprintf(os.Stderr, "Invalid command.")
+		ws.WriteMessage(msgType, []byte("Invalid Command"))
+		return
 	}
 
 	// Send message to docker service
