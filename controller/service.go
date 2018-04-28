@@ -98,7 +98,8 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte) (conn *websocket.Conn){
 	// Init the connection to the docker serveice
 	if *isFirst {
-		sConn, err := initDockerConnection(string(msg))
+		tmp, err := initDockerConnection(string(msg))
+		sConn = tmp
 		if err != nil {
 			panic(err)
 		}
