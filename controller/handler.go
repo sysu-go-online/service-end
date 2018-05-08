@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -169,6 +170,18 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Open a goroutine to receive message from client connection
 	go readFromClient(clientMsg, ws)
+
+	go func() {
+		for {
+			timer := time.NewTimer(time.Second * 2)
+			<-timer.C
+			err := ws.WriteControl(websocket.PingMessage, []byte("ping"), time.Time{})
+			if err != nil {
+				timer.Stop()
+				return
+			}
+		}
+	}()
 
 	// Handle messages from the channel
 	isFirst := true
