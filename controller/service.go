@@ -89,12 +89,13 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 			fmt.Fprintln(os.Stderr, "Can not read message.")
 			return
 		}
+		// fmt.Println(string(b))
 		clientChan <- b
 	}
 }
 
 // HandlerClientMsg handle message from client and send it to docker service
-func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte) (conn *websocket.Conn){
+func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte) (conn *websocket.Conn) {
 	// Init the connection to the docker serveice
 	if *isFirst {
 		tmp, err := initDockerConnection(string(msg))
@@ -105,7 +106,7 @@ func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, 
 		// Listen message from docker service and send to client connection
 		go sendMsgToClient(ws, sConn)
 	}
-	
+
 	if sConn == nil {
 		fmt.Fprintf(os.Stderr, "Invalid command.")
 		ws.WriteMessage(msgType, []byte("Invalid Command"))
