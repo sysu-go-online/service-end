@@ -23,7 +23,7 @@ func UpdateFileContent(projectid string, username string, filePath string, conte
 	if err != nil {
 		return err
 	}
-	absPath := filepath.Join(ROOT, username, "src/github.com", projectName, filePath)
+	absPath := getFilePath(username, projectName, filePath)
 
 	// Update file, if the file not exists, judge accroding to the given param
 	if create {
@@ -45,7 +45,7 @@ func DeleteFile(projectid string, username string, filePath string) error {
 	if err != nil {
 		return err
 	}
-	absPath := filepath.Join(ROOT, username, "src/github.com", projectName, filePath)
+	absPath := getFilePath(username, projectName, filePath)
 
 	// Delete file
 	err = os.RemoveAll(absPath)
@@ -59,7 +59,7 @@ func GetFileContent(projectid string, username string, filePath string) ([]byte,
 	if err != nil {
 		return nil, err
 	}
-	absPath := filepath.Join(ROOT, username, "src/github.com", projectName, filePath)
+	absPath := getFilePath(username, projectName, filePath)
 
 	// Read file content
 	content, err := ioutil.ReadFile(absPath)
@@ -76,7 +76,7 @@ func GetFileStructure(projectid string, username string) ([]entities.FileStructu
 	if err != nil {
 		return nil, err
 	}
-	absPath := filepath.Join(ROOT, username, "src/github.com", projectName)
+	absPath := getFilePath(username, projectName, "/")
 
 	// Recurisively get file structure
 	return dfs(absPath)
@@ -110,4 +110,8 @@ func dfs(path string) ([]entities.FileStructure, error) {
 		structure = append(structure, tmp)
 	}
 	return structure, nil
+}
+
+func getFilePath(username string, projectName string, filePath string) string {
+	return filepath.Join(ROOT, username, "go/src/github.com", username, projectName, filePath)
 }
