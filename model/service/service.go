@@ -79,12 +79,12 @@ func GetFileStructure(projectid string, username string) ([]entities.FileStructu
 	absPath := getFilePath(username, projectName, "/")
 
 	// Recurisively get file structure
-	return dfs(absPath)
+	return dfs(absPath, 0)
 }
 
 var id = 1
 
-func dfs(path string) ([]entities.FileStructure, error) {
+func dfs(path string, depth int) ([]entities.FileStructure, error) {
 	var structure []entities.FileStructure
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -94,13 +94,14 @@ func dfs(path string) ([]entities.FileStructure, error) {
 		tmp := entities.FileStructure{
 			ID:         id,
 			Name:       file.Name(),
-			EditStatus: 0,
+			Root:       depth == 0,
+			IsSelected: false,
 		}
 		id++
 		if file.IsDir() {
 			tmp.Type = "dir"
 			nextPath := filepath.Join(path, file.Name())
-			tmp.Children, err = dfs(nextPath)
+			tmp.Children, err = dfs(nextPath, depth+1)
 			if err != nil {
 				return nil, err
 			}
