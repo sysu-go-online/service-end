@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sysu-go-online/service-end/controller"
 	"github.com/urfave/negroni"
+	"github.com/rs/cors"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -34,7 +35,8 @@ func GetServer() *negroni.Negroni {
 	r.Handle("/{projectid}", controller.ErrorHandler(controller.GetFileStructureHandler))
 
 	// Use classic server and return it
+	handler := cors.Default().Handler(r)
 	s := negroni.Classic()
-	s.UseHandler(r)
+	s.UseHandler(handler)
 	return s
 }
