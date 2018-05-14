@@ -82,7 +82,7 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// GetFileContentHandler is a handler for read file content
+// GetFileContentHandler is a handler for reading file content
 func GetFileContentHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
@@ -132,18 +132,7 @@ func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id
 	vars := mux.Vars(r)
 	projectID := vars["projectid"]
-
-	// Handle ws connection here
-	if projectID == "ws" {
-		WebSocketTermHandler(w, r)
-		return nil
-	}
-
-	// Only accept GET method request
-	if r.Method != "GET" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return nil
-	}
+	
 	// Get file structure
 	structure, err := dao.GetFileStructure(projectID, username)
 	if err != nil {

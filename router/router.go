@@ -3,36 +3,35 @@ package router
 import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/rs/cors"
 	"github.com/sysu-go-online/service-end/controller"
 	"github.com/urfave/negroni"
-	"github.com/rs/cors"
 )
 
 var upgrader = websocket.Upgrader{}
 
 // GetServer return web server
 func GetServer() *negroni.Negroni {
-	// formatter := render.New(render.Options{
-	// 	IndentJSON: true,
-	// })
-
 	r := mux.NewRouter()
-	// static := "static"
-	// Define static service
-	// r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(static))))
 
-	// /projects router
-	// r.HandleFunc("/projects", controller.CreateProjects).Methods("POST")
-	// r.HandleFunc("/projects", controller.GetProjectsID(formatter)).Methods("GET")
-	// r.HandleFunc("/test", controller.TestGetProjectsID(formatter)).Methods("GET")
+	// websocket handler
+	r.HandleFunc("/ws", controller.WebSocketTermHandler)
 
-	// file router
-	r.Handle("/{projectid}/tree/{filepath:.*}", controller.ErrorHandler(controller.UpdateFileHandler)).Methods("POST")
-	r.Handle("/{projectid}/tree/{filepath:.*}", controller.ErrorHandler(controller.GetFileContentHandler)).Methods("GET")
-	r.Handle("/{projectid}/tree/{filepath:.*}", controller.ErrorHandler(controller.CreateFileHandler)).Methods("PUT")
-	r.Handle("/{projectid}/tree/{filepath:.*}", controller.ErrorHandler(controller.DeleteFileHandler)).Methods("DELETE")
-	// Also handler websocket connection here
-	r.Handle("/{projectid}", controller.ErrorHandler(controller.GetFileStructureHandler))
+	// subrouter
+	users := r.PathPrefix("/users").Subrouter()
+	projects := users.PathPrefix("/{username}/projects").Subrouter()
+	files := projects.PathPrefix("/{projectname}/files").Subrouter()
+
+	// user collection
+	
+	// project collection
+
+	// file collection
+	files.Handle("", controller.ErrorHandler(controller.GetFileStructureHandler)).Methods("GET")
+	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.GetFileContentHandler)).Methods("GET")
+	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.UpdateFileHandler)).Methods("POST")
+	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.CreateFileHandler)).Methods("PUT")
+	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.DeleteFileHandler)).Methods("DELETE")
 
 	// Use classic server and return it
 	handler := cors.Default().Handler(r)
