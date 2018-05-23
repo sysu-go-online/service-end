@@ -1,12 +1,15 @@
 package controller
 
 import (
+	"gopkg.in/yaml.v2"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
 
 	"github.com/gorilla/websocket"
+	"github.com/sysu-go-online/service-end/types"
 )
 
 func checkFilePath(path string) bool {
@@ -150,7 +153,21 @@ func getEnv(projectName string, username string) []string {
 }
 
 func GetGithubAppMessages() (string, string) {
-	ID := "635cfc9655dbb5bca4d4"
-	Secret := "f9c08ae0227b645c88d87b999202d7f52828af97"
-	return ID, Secret
+	// Get messages from configure file
+	configureFilePath := os.Getenv("CONFI_FILE_PATH")
+	if len(configureFilePath) == 0 {
+		configureFilePath = "/config/config.yml"
+	}
+	content, err := ioutil.ReadFile(configureFilePath)
+	if err != nil {
+		fmt.Println(err)
+		return "", ""
+	}
+	config := new(types.ConfigFile)
+	err = yaml.Unmarshal(content, config)
+	if err != nil {
+		fmt.Println(err)
+		return "", ""
+	}
+	return config.ID, config.Secret
 }

@@ -22,5 +22,10 @@ type GithubUserDataResponse struct {
 
 type AuthResponse struct {
 	Name string `json:"name"`
-	Icon  string `json:"icon"`
+	Icon string `json:"icon"`
+}
+
+type ConfigFile struct {
+	ID     string `yaml:"ID"`
+	Secret string `yaml:"SECRET"`
 }
