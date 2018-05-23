@@ -116,3 +116,7 @@ func dfs(path string, depth int) ([]entities.FileStructure, error) {
 func getFilePath(username string, projectName string, filePath string) string {
 	return filepath.Join(ROOT, username, "go/src/github.com", username, projectName, filePath)
 }
+
+func GetUserInformation(username string) entities.UserInfo {
+	return entities.UserInfo{}
+}

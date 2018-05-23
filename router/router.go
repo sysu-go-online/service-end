@@ -33,6 +33,9 @@ func GetServer() *negroni.Negroni {
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.CreateFileHandler)).Methods("PUT")
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.DeleteFileHandler)).Methods("DELETE")
 
+	// auth collection
+	r.Handle("/auth", controller.ErrorHandler(controller.AuthUserHandler)).Methods("GET")
+
 	// Use classic server and return it
 	handler := cors.Default().Handler(r)
 	s := negroni.Classic()

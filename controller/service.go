@@ -148,3 +148,9 @@ func getEnv(projectName string, username string) []string {
 	env = append(env, filepath.Join("/go", "src"))
 	return env
 }
+
+func GetGithubAppMessages() (string, string) {
+	ID := "635cfc9655dbb5bca4d4"
+	Secret := "f9c08ae0227b645c88d87b999202d7f52828af97"
+	return ID, Secret
+}
