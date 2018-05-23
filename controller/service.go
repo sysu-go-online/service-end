@@ -1,12 +1,16 @@
 package controller
 
 import (
-	"gopkg.in/yaml.v2"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/gorilla/websocket"
 	"github.com/sysu-go-online/service-end/types"
@@ -152,6 +156,7 @@ func getEnv(projectName string, username string) []string {
 	return env
 }
 
+// GetGithubAppMessages get github app id and secret and return it
 func GetGithubAppMessages() (string, string) {
 	// Get messages from configure file
 	configureFilePath := os.Getenv("CONFI_FILE_PATH")
@@ -170,4 +175,64 @@ func GetGithubAppMessages() (string, string) {
 		return "", ""
 	}
 	return config.ID, config.Secret
+}
+
+// GetAccessToken get access_token from github and return it
+func GetAccessToken(code, state string) (string, error) {
+	// Post data to github for returned value
+	id, secret := GetGithubAppMessages()
+	client := &http.Client{}
+	url := "https://github.com/login/oauth/access_token"
+	jsonBody := types.GithubRequestBody{
+		ClientID:     id,
+		ClientSecret: secret,
+		Code:         code,
+		State:        state,
+	}
+	byteBody, err := json.Marshal(jsonBody)
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(byteBody))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Accept", "application/json")
+	res, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	// Read data from response
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+	jsonResBody := new(types.GithubResponseBody)
+	err = json.Unmarshal(body, jsonResBody)
+	if err != nil {
+		return "", err
+	}
+	return jsonResBody.AccessToken, nil
+}
+
+// GetUserMessage get user basic infomation from github and return it
+func GetUserMessage(accessToken string) (*types.GithubUserDataResponse, error) {
+	// Get user message from github service
+	url := "https://api.github.com/user?access_token=" + accessToken
+	req, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer req.Body.Close()
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	jsonResBody := new(types.GithubUserDataResponse)
+	err = json.Unmarshal(body, jsonResBody)
+	if err != nil {
+		return nil, err
+	}
+	return jsonResBody, nil
 }

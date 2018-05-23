@@ -1,13 +1,13 @@
 package controller
 
 import (
-	"github.com/sysu-go-online/service-end/model/service"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/sysu-go-online/service-end/model/service"
 
 	"github.com/sysu-go-online/service-end/types"
 
@@ -188,7 +188,6 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func AuthUserHandler(w http.ResponseWriter, r *http.Request) error {
-	id, secret := GetGithubAppMessages()
 	// Get code and state from client
 	r.ParseForm()
 	code := r.FormValue("code")
@@ -196,66 +195,20 @@ func AuthUserHandler(w http.ResponseWriter, r *http.Request) error {
 	if len(code)*len(state) == 0 {
 		return errors.New("Incomplete form value")
 	}
-	// Post data to github for returned value
-	var access_token string
-	var userInfo types.GithubUserDataResponse
-	client := &http.Client{}
-	{
-		url := "https://github.com/login/oauth/access_token"
-		jsonBody := types.GithubRequestBody{
-			ClientID:     id,
-			ClientSecret: secret,
-			Code:         code,
-			State:        state,
-		}
-		byteBody, err := json.Marshal(jsonBody)
-		if err != nil {
-			return err
-		}
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(byteBody))
-		if err != nil {
-			return err
-		}
-		req.Header.Set("Accept", "application/json")
-		res, err := client.Do(req)
-		defer res.Body.Close()
-		// Read data from response
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-		jsonResBody := new(types.GithubResponseBody)
-		err = json.Unmarshal(body, jsonResBody)
-		if err != nil {
-			return err
-		}
-		access_token = jsonResBody.AccessToken
+	accessToken, err := GetAccessToken(code, state)
+	if err != nil {
+		return nil
 	}
-	{
-		// Get user message from github service
-		url := "https://api.github.com/user?access_token=" + access_token
-		req, err := http.Get(url)
-		if err != nil {
-			return err
-		}
-		defer req.Body.Close()
-		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			return err
-		}
-		jsonResBody := new(types.GithubUserDataResponse)
-		err = json.Unmarshal(body, jsonResBody)
-		if err != nil {
-			return err
-		}
-		userInfo = *jsonResBody
+	userInfo, err := GetUserMessage(accessToken)
+	if err != nil {
+		return err
 	}
 	// Check user data in the database
 	user := service.GetUserInformation(userInfo.Username)
 	if user.Name == "" {
 		// Add this user to the db
 	}
-	ret := types.AuthResponse {
+	ret := types.AuthResponse{
 		Name: user.Name,
 		Icon: user.Icon,
 	}
