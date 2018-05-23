@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
 	"github.com/sysu-go-online/service-end/controller"
+	"github.com/sysu-go-online/service-end/middleware"
 	"github.com/urfave/negroni"
 )
 
@@ -23,7 +24,7 @@ func GetServer() *negroni.Negroni {
 	files := projects.PathPrefix("/{projectname}/files").Subrouter()
 
 	// user collection
-	
+	users.Handle("/{username}", controller.ErrorHandler(controller.UserLoginHandler)).Methods("PATCH")
 	// project collection
 
 	// file collection
@@ -39,6 +40,7 @@ func GetServer() *negroni.Negroni {
 	// Use classic server and return it
 	handler := cors.Default().Handler(r)
 	s := negroni.Classic()
+	s.Use(middleware.AuthToken{})
 	s.UseHandler(handler)
 	return s
 }

@@ -206,7 +206,7 @@ func AuthUserHandler(w http.ResponseWriter, r *http.Request) error {
 	// Check user data in the database
 	user := service.GetUserInformation(userInfo.Username)
 	if user.Name == "" {
-		// Add this user to the db
+		// TODO: Add this user to the db
 	}
 	ret := types.AuthResponse{
 		Name: user.Name,
@@ -217,5 +217,9 @@ func AuthUserHandler(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	w.Write(byteRetBody)
+	return nil
+}
+
+func UserLoginHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }

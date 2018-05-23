@@ -117,6 +117,13 @@ func getFilePath(username string, projectName string, filePath string) string {
 	return filepath.Join(ROOT, username, "go/src/github.com", username, projectName, filePath)
 }
 
+// TODO: Get user information
 func GetUserInformation(username string) entities.UserInfo {
 	return entities.UserInfo{}
+}
+
+// TODO: Insert user information
+
+func AddUser(entities.UserInfo) error {
+	return nil
 }
