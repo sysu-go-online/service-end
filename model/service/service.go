@@ -70,7 +70,7 @@ func GetFileContent(projectid string, username string, filePath string) ([]byte,
 }
 
 // GetFileStructure read file structure and return it
-func GetFileStructure(projectid string, username string) ([]entities.FileStructure, error) {
+func GetFileStructure(projectid string, username string) (*entities.FileStructure, error) {
 	// Get absolute path
 	projectName, err := GetProjectNameByID(projectid)
 	if err != nil {
@@ -79,7 +79,20 @@ func GetFileStructure(projectid string, username string) ([]entities.FileStructu
 	absPath := getFilePath(username, projectName, "/")
 
 	// Recurisively get file structure
-	return dfs(absPath, 0)
+	s, err := dfs(absPath, 0)
+	if err != nil {
+		return nil, err
+	}
+	// Add root content
+	root := entities.FileStructure{
+		ID: 1,
+		Name: projectName,
+		Type: "dir",
+		Children: s,
+		Root: true,
+		IsSelected: true,
+	}
+	return &root, nil
 }
 
 var id = 1
@@ -94,7 +107,7 @@ func dfs(path string, depth int) ([]entities.FileStructure, error) {
 		tmp := entities.FileStructure{
 			ID:         id,
 			Name:       file.Name(),
-			Root:       depth == 0,
+			Root:       false,
 			IsSelected: false,
 		}
 		id++
