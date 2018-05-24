@@ -122,8 +122,17 @@ func GetUserInformation(username string) entities.UserInfo {
 	return entities.UserInfo{}
 }
 
-// TODO: Insert user information
+// AddUser Insert user information
+func AddUser(e entities.UserInfo) error {
+	_, err := entities.Engine.InsertOne(e)
+	return err
+}
 
-func AddUser(entities.UserInfo) error {
-	return nil
+// UpdateAccessToken update token in the db
+func UpdateAccessToken(token string) error {
+	e := entities.UserInfo{
+		Token: token,
+	}
+	_, err := entities.Engine.Update(e)
+	return err
 }

@@ -3,10 +3,12 @@ package controller
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
+	"github.com/sysu-go-online/service-end/model/entities"
 	"github.com/sysu-go-online/service-end/model/service"
 
 	"github.com/sysu-go-online/service-end/types"
@@ -206,8 +208,33 @@ func AuthUserHandler(w http.ResponseWriter, r *http.Request) error {
 	// Check user data in the database
 	user := service.GetUserInformation(userInfo.Username)
 	if user.Name == "" {
-		// TODO: Add this user to the db
+		// Add this user to the db
+		currentTime := time.Now()
+		user = entities.UserInfo{
+			Name:       userInfo.Username,
+			Icon:       userInfo.Icon,
+			Email:      userInfo.Email,
+			CreateTime: &currentTime,
+			Gender:     0,
+			Age:        0,
+			Token:      accessToken,
+		}
+		err := service.AddUser(user)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+	} else {
+		err := service.UpdateAccessToken(accessToken)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 	}
+	// Generate token for user and add it to header
+	token := GenerateToken(userInfo.Username)
+	r.Header.Set("Token", token)
+	// Generate json and return it
 	ret := types.AuthResponse{
 		Name: user.Name,
 		Icon: user.Icon,

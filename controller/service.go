@@ -9,6 +9,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
 
 	"gopkg.in/yaml.v2"
 
@@ -158,20 +161,8 @@ func getEnv(projectName string, username string) []string {
 
 // GetGithubAppMessages get github app id and secret and return it
 func GetGithubAppMessages() (string, string) {
-	// Get messages from configure file
-	configureFilePath := os.Getenv("CONFI_FILE_PATH")
-	if len(configureFilePath) == 0 {
-		configureFilePath = "/config/config.yml"
-	}
-	content, err := ioutil.ReadFile(configureFilePath)
-	if err != nil {
-		fmt.Println(err)
-		return "", ""
-	}
-	config := new(types.ConfigFile)
-	err = yaml.Unmarshal(content, config)
-	if err != nil {
-		fmt.Println(err)
+	config := GetConfigContent()
+	if config == nil {
 		return "", ""
 	}
 	return config.ID, config.Secret
@@ -235,4 +226,46 @@ func GetUserMessage(accessToken string) (*types.GithubUserDataResponse, error) {
 		return nil, err
 	}
 	return jsonResBody, nil
+}
+
+// GenerateToken generate token for user with username
+func GenerateToken(username string) string {
+	config := GetConfigContent()
+	if config == nil {
+		return ""
+	}
+	key := config.TokenKey
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"iss": "go-online",
+		"sub": username,
+		"exp": time.Now().Add(time.Second * 3600 * 30).Unix(),
+		"iat": time.Now().Unix(),
+	})
+	ret, err := token.SignedString(key)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	return ret
+}
+
+// GetConfigContent read configure file and return the content
+func GetConfigContent() *types.ConfigFile {
+	// Get messages from configure file
+	configureFilePath := os.Getenv("CONFI_FILE_PATH")
+	if len(configureFilePath) == 0 {
+		configureFilePath = "/config/config.yml"
+	}
+	content, err := ioutil.ReadFile(configureFilePath)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	config := new(types.ConfigFile)
+	err = yaml.Unmarshal(content, config)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return config
 }
