@@ -23,7 +23,8 @@ func GetServer() *negroni.Negroni {
 	files := projects.PathPrefix("/{projectname}/files").Subrouter()
 
 	// user collection
-	users.Handle("/{username}", controller.ErrorHandler(controller.UserLoginHandler)).Methods("PATCH")
+	users.Handle("/{username}", controller.ErrorHandler(controller.UpdateUserMessageHandler)).Methods("PATCH")
+	users.Handle("/{username}", controller.ErrorHandler(controller.GetUserMessageHandler)).Methods("GET")
 	// project collection
 
 	// file collection
@@ -32,9 +33,6 @@ func GetServer() *negroni.Negroni {
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.UpdateFileHandler)).Methods("POST")
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.CreateFileHandler)).Methods("PUT")
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.DeleteFileHandler)).Methods("DELETE")
-
-	// auth collection
-	r.Handle("/auth", controller.ErrorHandler(controller.AuthUserHandler)).Methods("GET")
 
 	// Use classic server and return it
 	handler := cors.Default().Handler(r)

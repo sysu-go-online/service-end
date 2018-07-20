@@ -2,16 +2,9 @@ package controller
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"github.com/sysu-go-online/service-end/model/entities"
-	"github.com/sysu-go-online/service-end/model/service"
-
-	"github.com/sysu-go-online/service-end/types"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -194,66 +187,12 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	sConn.Close()
 }
 
-// AuthUserHandler auth user
-func AuthUserHandler(w http.ResponseWriter, r *http.Request) error {
-	// Get code and state from client
-	r.ParseForm()
-	code := r.FormValue("code")
-	state := r.FormValue("state")
-	if len(code)*len(state) == 0 {
-		return errors.New("Incomplete form value")
-	}
-	accessToken, err := GetAccessToken(code, state)
-	if err != nil {
-		return nil
-	}
-	userInfo, err := GetUserMessage(accessToken)
-	if err != nil {
-		return err
-	}
-	// Check user data in the database
-	user := service.GetUserInformation(userInfo.Username)
-	if user.Name == "" {
-		// Add this user to the db
-		currentTime := time.Now()
-		user = entities.UserInfo{
-			Name:       userInfo.Username,
-			Icon:       userInfo.Icon,
-			Email:      userInfo.Email,
-			CreateTime: &currentTime,
-			Gender:     0,
-			Age:        0,
-			Token:      accessToken,
-		}
-		err := service.AddUser(user)
-		if err != nil {
-			fmt.Println(err)
-			return err
-		}
-	} else {
-		err := service.UpdateAccessToken(accessToken)
-		if err != nil {
-			fmt.Println(err)
-			return err
-		}
-	}
-	// Generate token for user and add it to header
-	token := GenerateToken(userInfo.Username)
-	r.Header.Set("Token", token)
-	// Generate json and return it
-	ret := types.AuthResponse{
-		Name: user.Name,
-		Icon: user.Icon,
-	}
-	byteRetBody, err := json.Marshal(ret)
-	if err != nil {
-		return err
-	}
-	w.Write(byteRetBody)
+// UpdateUserMessageHandler update user information
+func UpdateUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// UserLoginHandler handle user login event
-func UserLoginHandler(w http.ResponseWriter, r *http.Request) error {
+// GetUserMessageHandler get user information
+func GetUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
