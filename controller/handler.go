@@ -138,10 +138,11 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) error {
 func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 
 	// Get file structure
-	structure, err := dao.GetFileStructure(projectID, username)
+	structure, err := dao.GetFileStructure(projectName, userName)
 	if err != nil {
 		return err
 	}

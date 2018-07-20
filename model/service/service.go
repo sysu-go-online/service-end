@@ -85,11 +85,11 @@ func GetFileStructure(projectid string, username string) (*entities.FileStructur
 	}
 	// Add root content
 	root := entities.FileStructure{
-		ID: 1,
-		Name: projectName,
-		Type: "dir",
-		Children: s,
-		Root: true,
+		ID:         1,
+		Name:       projectName,
+		Type:       "dir",
+		Children:   s,
+		Root:       true,
 		IsSelected: true,
 	}
 	return &root, nil
@@ -127,7 +127,7 @@ func dfs(path string, depth int) ([]entities.FileStructure, error) {
 }
 
 func getFilePath(username string, projectName string, filePath string) string {
-	return filepath.Join(ROOT, username, "go/src/github.com", username, projectName, filePath)
+	return filepath.Join(ROOT, username, "go/src/github.com", projectName, filePath)
 }
 
 // TODO: Get user information
