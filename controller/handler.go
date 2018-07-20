@@ -19,7 +19,7 @@ import (
 	dao "github.com/sysu-go-online/service-end/model/service"
 )
 
-var username = "golang"
+// var username = "golang"
 
 // UpdateFileHandler is a handler for update file
 func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
@@ -31,7 +31,8 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 	filePath := vars["filepath"]
 
 	// Check if the file path is valid
@@ -39,7 +40,7 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectID, username, filePath, string(body), false, false)
+		err := dao.UpdateFileContent(projectName, userName, filePath, string(body), false, false)
 		if err != nil {
 			return err
 		}
@@ -70,7 +71,8 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 	filePath := vars["filepath"]
 
 	// Check if the file path is valid
@@ -78,7 +80,7 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectID, username, filePath, "", true, dir)
+		err := dao.UpdateFileContent(projectName, userName, filePath, "", true, dir)
 		if err != nil {
 			return err
 		}
@@ -93,14 +95,15 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 func GetFileContentHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 	filePath := vars["filepath"]
 
 	// Check if the file path is valid
 	ok := checkFilePath(filePath)
 	if ok {
 		// Load file
-		content, err := dao.GetFileContent(projectID, username, filePath)
+		content, err := dao.GetFileContent(projectName, userName, filePath)
 		if err != nil {
 			return err
 		}
@@ -112,18 +115,19 @@ func GetFileContentHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// GetFileContentHandler is a handler for read file content
+// DeleteFileHandler is a handler for delete file
 func DeleteFileHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 	filePath := vars["filepath"]
 
 	// Check if the file path is valid
 	ok := checkFilePath(filePath)
 	if ok {
 		// Load file
-		err := dao.DeleteFile(projectID, username, filePath)
+		err := dao.DeleteFile(projectName, userName, filePath)
 		if err != nil {
 			return err
 		}
@@ -190,6 +194,7 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	sConn.Close()
 }
 
+// AuthUserHandler auth user
 func AuthUserHandler(w http.ResponseWriter, r *http.Request) error {
 	// Get code and state from client
 	r.ParseForm()
@@ -248,6 +253,7 @@ func AuthUserHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// UserLoginHandler handle user login event
 func UserLoginHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
