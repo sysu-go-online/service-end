@@ -2,16 +2,9 @@ package controller
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"github.com/sysu-go-online/service-end/model/entities"
-	"github.com/sysu-go-online/service-end/model/service"
-
-	"github.com/sysu-go-online/service-end/types"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -19,7 +12,7 @@ import (
 	dao "github.com/sysu-go-online/service-end/model/service"
 )
 
-var username = "golang"
+// var username = "golang"
 
 // UpdateFileHandler is a handler for update file
 func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
@@ -31,7 +24,8 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 	filePath := vars["filepath"]
 
 	// Check if the file path is valid
@@ -39,7 +33,7 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectID, username, filePath, string(body), false, false)
+		err := dao.UpdateFileContent(projectName, userName, filePath, string(body), false, false)
 		if err != nil {
 			return err
 		}
@@ -70,7 +64,8 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 	filePath := vars["filepath"]
 
 	// Check if the file path is valid
@@ -78,7 +73,7 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectID, username, filePath, "", true, dir)
+		err := dao.UpdateFileContent(projectName, userName, filePath, "", true, dir)
 		if err != nil {
 			return err
 		}
@@ -93,14 +88,15 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 func GetFileContentHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 	filePath := vars["filepath"]
 
 	// Check if the file path is valid
 	ok := checkFilePath(filePath)
 	if ok {
 		// Load file
-		content, err := dao.GetFileContent(projectID, username, filePath)
+		content, err := dao.GetFileContent(projectName, userName, filePath)
 		if err != nil {
 			return err
 		}
@@ -112,18 +108,19 @@ func GetFileContentHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// GetFileContentHandler is a handler for read file content
+// DeleteFileHandler is a handler for delete file
 func DeleteFileHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id and file path from uri
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 	filePath := vars["filepath"]
 
 	// Check if the file path is valid
 	ok := checkFilePath(filePath)
 	if ok {
 		// Load file
-		err := dao.DeleteFile(projectID, username, filePath)
+		err := dao.DeleteFile(projectName, userName, filePath)
 		if err != nil {
 			return err
 		}
@@ -138,10 +135,11 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) error {
 func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read project id
 	vars := mux.Vars(r)
-	projectID := vars["projectid"]
+	projectName := vars["projectname"]
+	userName := vars["username"]
 
 	// Get file structure
-	structure, err := dao.GetFileStructure(projectID, username)
+	structure, err := dao.GetFileStructure(projectName, userName)
 	if err != nil {
 		return err
 	}
@@ -183,70 +181,54 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	isFirst := true
 	var sConn *websocket.Conn
 	for msg := range clientMsg {
-		conn := handlerClientMsg(&isFirst, ws, sConn, msgType, msg)
+		conn := handlerClientTTYMsg(&isFirst, ws, sConn, msgType, msg)
 		sConn = conn
 	}
 	sConn.Close()
 }
 
-func AuthUserHandler(w http.ResponseWriter, r *http.Request) error {
-	// Get code and state from client
-	r.ParseForm()
-	code := r.FormValue("code")
-	state := r.FormValue("state")
-	if len(code)*len(state) == 0 {
-		return errors.New("Incomplete form value")
-	}
-	accessToken, err := GetAccessToken(code, state)
+// DebugHandler is a websocket connection and handle debug information
+func DebugHandler(w http.ResponseWriter, r *http.Request) {
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	// Set TextMessage as default
+	msgType := websocket.TextMessage
+	clientMsg := make(chan []byte)
 	if err != nil {
-		return nil
+		panic(err)
 	}
-	userInfo, err := GetUserMessage(accessToken)
-	if err != nil {
-		return err
-	}
-	// Check user data in the database
-	user := service.GetUserInformation(userInfo.Username)
-	if user.Name == "" {
-		// Add this user to the db
-		currentTime := time.Now()
-		user = entities.UserInfo{
-			Name:       userInfo.Username,
-			Icon:       userInfo.Icon,
-			Email:      userInfo.Email,
-			CreateTime: &currentTime,
-			Gender:     0,
-			Age:        0,
-			Token:      accessToken,
+	defer ws.Close()
+
+	// Open a goroutine to receive message from client connection
+	go readFromClient(clientMsg, ws)
+
+	go func() {
+		for {
+			timer := time.NewTimer(time.Second * 2)
+			<-timer.C
+			err := ws.WriteControl(websocket.PingMessage, []byte("ping"), time.Time{})
+			if err != nil {
+				timer.Stop()
+				return
+			}
 		}
-		err := service.AddUser(user)
-		if err != nil {
-			fmt.Println(err)
-			return err
-		}
-	} else {
-		err := service.UpdateAccessToken(accessToken)
-		if err != nil {
-			fmt.Println(err)
-			return err
-		}
+	}()
+
+	// Handle messages from the channel
+	isFirst := true
+	var sConn *websocket.Conn
+	for msg := range clientMsg {
+		conn := handleClientDebugMessage(&isFirst, ws, sConn, msgType, msg)
+		sConn = conn
 	}
-	// Generate token for user and add it to header
-	token := GenerateToken(userInfo.Username)
-	r.Header.Set("Token", token)
-	// Generate json and return it
-	ret := types.AuthResponse{
-		Name: user.Name,
-		Icon: user.Icon,
-	}
-	byteRetBody, err := json.Marshal(ret)
-	if err != nil {
-		return err
-	}
-	w.Write(byteRetBody)
+	sConn.Close()
+}
+
+// UpdateUserMessageHandler update user information
+func UpdateUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func UserLoginHandler(w http.ResponseWriter, r *http.Request) error {
+// GetUserMessageHandler get user information
+func GetUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }

@@ -85,11 +85,11 @@ func GetFileStructure(projectid string, username string) (*entities.FileStructur
 	}
 	// Add root content
 	root := entities.FileStructure{
-		ID: 1,
-		Name: projectName,
-		Type: "dir",
-		Children: s,
-		Root: true,
+		ID:         1,
+		Name:       projectName,
+		Type:       "dir",
+		Children:   s,
+		Root:       true,
 		IsSelected: true,
 	}
 	return &root, nil

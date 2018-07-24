@@ -12,6 +12,7 @@ type Command struct {
 	UserName    string   `json:"user"`
 	ProjectName string   `json:"project"`
 	Entrypoint  []string `json:"entrypoint"`
+	Type        string   `json:"type"`
 }
 
 // ErrorHandler is error handler for http

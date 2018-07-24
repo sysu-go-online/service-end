@@ -5,7 +5,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
 	"github.com/sysu-go-online/service-end/controller"
-	"github.com/sysu-go-online/service-end/middleware"
 	"github.com/urfave/negroni"
 )
 
@@ -16,7 +15,9 @@ func GetServer() *negroni.Negroni {
 	r := mux.NewRouter()
 
 	// websocket handler
-	r.HandleFunc("/ws", controller.WebSocketTermHandler)
+	ws := r.PathPrefix("/ws").Subrouter()
+	ws.HandleFunc("/tty", controller.WebSocketTermHandler)
+	ws.HandleFunc("/debug", controller.DebugHandler)
 
 	// subrouter
 	users := r.PathPrefix("/users").Subrouter()
@@ -24,7 +25,8 @@ func GetServer() *negroni.Negroni {
 	files := projects.PathPrefix("/{projectname}/files").Subrouter()
 
 	// user collection
-	users.Handle("/{username}", controller.ErrorHandler(controller.UserLoginHandler)).Methods("PATCH")
+	users.Handle("/{username}", controller.ErrorHandler(controller.UpdateUserMessageHandler)).Methods("PATCH")
+	users.Handle("/{username}", controller.ErrorHandler(controller.GetUserMessageHandler)).Methods("GET")
 	// project collection
 
 	// file collection
@@ -34,13 +36,9 @@ func GetServer() *negroni.Negroni {
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.CreateFileHandler)).Methods("PUT")
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.DeleteFileHandler)).Methods("DELETE")
 
-	// auth collection
-	r.Handle("/auth", controller.ErrorHandler(controller.AuthUserHandler)).Methods("GET")
-
 	// Use classic server and return it
 	handler := cors.Default().Handler(r)
 	s := negroni.Classic()
-	s.Use(middleware.AuthToken{})
 	s.UseHandler(handler)
 	return s
 }
