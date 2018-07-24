@@ -15,7 +15,9 @@ func GetServer() *negroni.Negroni {
 	r := mux.NewRouter()
 
 	// websocket handler
-	r.HandleFunc("/ws", controller.WebSocketTermHandler)
+	ws := r.PathPrefix("/ws").Subrouter()
+	ws.HandleFunc("/tty", controller.WebSocketTermHandler)
+	ws.HandleFunc("/debug", controller.DebugHandler)
 
 	// subrouter
 	users := r.PathPrefix("/users").Subrouter()

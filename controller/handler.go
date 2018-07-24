@@ -181,7 +181,43 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	isFirst := true
 	var sConn *websocket.Conn
 	for msg := range clientMsg {
-		conn := handlerClientMsg(&isFirst, ws, sConn, msgType, msg)
+		conn := handlerClientTTYMsg(&isFirst, ws, sConn, msgType, msg)
+		sConn = conn
+	}
+	sConn.Close()
+}
+
+// DebugHandler is a websocket connection and handle debug information
+func DebugHandler(w http.ResponseWriter, r *http.Request) {
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	// Set TextMessage as default
+	msgType := websocket.TextMessage
+	clientMsg := make(chan []byte)
+	if err != nil {
+		panic(err)
+	}
+	defer ws.Close()
+
+	// Open a goroutine to receive message from client connection
+	go readFromClient(clientMsg, ws)
+
+	go func() {
+		for {
+			timer := time.NewTimer(time.Second * 2)
+			<-timer.C
+			err := ws.WriteControl(websocket.PingMessage, []byte("ping"), time.Time{})
+			if err != nil {
+				timer.Stop()
+				return
+			}
+		}
+	}()
+
+	// Handle messages from the channel
+	isFirst := true
+	var sConn *websocket.Conn
+	for msg := range clientMsg {
+		conn := handleClientDebugMessage(&isFirst, ws, sConn, msgType, msg)
 		sConn = conn
 	}
 	sConn.Close()

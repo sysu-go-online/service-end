@@ -1,17 +1,10 @@
 package controller
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
-	"time"
-
-	"github.com/dgrijalva/jwt-go"
 
 	"gopkg.in/yaml.v2"
 
@@ -24,9 +17,9 @@ func checkFilePath(path string) bool {
 }
 
 // InitDockerConnection inits the connection to the docker service with the first message received from client
-func initDockerConnection(msg string) (*websocket.Conn, error) {
+func initDockerConnection(msg string, service string) (*websocket.Conn, error) {
 	// Just handle command start with `go`
-	conn, err := dialDockerService()
+	conn, err := dialDockerService(service)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +27,9 @@ func initDockerConnection(msg string) (*websocket.Conn, error) {
 }
 
 // DialDockerService create connection between web server and docker server
-func dialDockerService() (*websocket.Conn, error) {
+// Accept service type:
+// tty debug
+func dialDockerService(service string) (*websocket.Conn, error) {
 	// Set up websocket connection
 	dockerAddr := os.Getenv("DOCKER_ADDRESS")
 	dockerPort := os.Getenv("DOCKER_PORT")
@@ -46,42 +41,12 @@ func dialDockerService() (*websocket.Conn, error) {
 	}
 	dockerPort = ":" + dockerPort
 	dockerAddr = dockerAddr + dockerPort
-	url := url.URL{Scheme: "ws", Host: dockerAddr, Path: "/"}
+	url := url.URL{Scheme: "ws", Host: dockerAddr, Path: "/" + service}
 	conn, _, err := websocket.DefaultDialer.Dial(url.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 	return conn, nil
-}
-
-// HandleMessage decide different operation according to the given json message
-func handleMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool) error {
-	var workSpace *Command
-	var err error
-	if isFirst {
-		projectName := "test"
-		username := "golang"
-		pwd := getPwd(projectName, username)
-		env := getEnv(projectName, username)
-		workSpace = &Command{
-			Command:     string(msg),
-			PWD:         pwd,
-			ENV:         env,
-			UserName:    username,
-			ProjectName: projectName,
-		}
-	}
-
-	// Send message
-	if isFirst {
-		err = conn.WriteJSON(*workSpace)
-	} else {
-		err = conn.WriteMessage(mType, msg)
-	}
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // ReadFromClient receive message from client connection
@@ -104,149 +69,18 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 	}
 }
 
-// HandlerClientMsg handle message from client and send it to docker service
-func handlerClientMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte) (conn *websocket.Conn) {
-	// Init the connection to the docker serveice
-	if *isFirst {
-		tmp, err := initDockerConnection(string(msg))
-		sConn = tmp
-		if err != nil {
-			panic(err)
-		}
-		// Listen message from docker service and send to client connection
-		go sendMsgToClient(ws, sConn)
-	}
-
-	if sConn == nil {
-		fmt.Fprintf(os.Stderr, "Invalid command.")
-		ws.WriteMessage(msgType, []byte("Invalid Command"))
-		ws.Close()
-		conn = nil
-		return
-	}
-
-	// Send message to docker service
-	handleMessage(msgType, msg, sConn, *isFirst)
-	*isFirst = false
-	conn = sConn
-	return
-}
-
-// SendMsgToClient send message to client
-func sendMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
-	for {
-		mType, msg, err := sConn.ReadMessage()
-		if err != nil {
-			// Server closed connection
-			fmt.Fprintln(os.Stderr, "Docker service closed the connection")
-			cConn.Close()
-			return
-		}
-		cConn.WriteMessage(mType, msg)
-	}
-}
-
 // getPwd return current path of given username
 func getPwd(projectName string, username string) string {
 	// Return user root in test version
 	return ""
 }
 
-func getEnv(projectName string, username string) []string {
+func getEnv(projectName string, username string, language string) []string {
 	env := []string{}
-	env = append(env, "GOPATH")
-	env = append(env, filepath.Join("/go", "src"))
+	if language == "golang" {
+		env = append(env, "GOPATH=/root/go:/home/go")
+	}
 	return env
-}
-
-// GetGithubAppMessages get github app id and secret and return it
-func GetGithubAppMessages() (string, string) {
-	config := GetConfigContent()
-	if config == nil {
-		return "", ""
-	}
-	return config.ID, config.Secret
-}
-
-// GetAccessToken get access_token from github and return it
-func GetAccessToken(code, state string) (string, error) {
-	// Post data to github for returned value
-	id, secret := GetGithubAppMessages()
-	client := &http.Client{}
-	url := "https://github.com/login/oauth/access_token"
-	jsonBody := types.GithubRequestBody{
-		ClientID:     id,
-		ClientSecret: secret,
-		Code:         code,
-		State:        state,
-	}
-	byteBody, err := json.Marshal(jsonBody)
-	if err != nil {
-		return "", err
-	}
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(byteBody))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Accept", "application/json")
-	res, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-	// Read data from response
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-	jsonResBody := new(types.GithubResponseBody)
-	err = json.Unmarshal(body, jsonResBody)
-	if err != nil {
-		return "", err
-	}
-	return jsonResBody.AccessToken, nil
-}
-
-// GetUserMessage get user basic infomation from github and return it
-func GetUserMessage(accessToken string) (*types.GithubUserDataResponse, error) {
-	// Get user message from github service
-	url := "https://api.github.com/user?access_token=" + accessToken
-	req, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer req.Body.Close()
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	jsonResBody := new(types.GithubUserDataResponse)
-	err = json.Unmarshal(body, jsonResBody)
-	if err != nil {
-		return nil, err
-	}
-	return jsonResBody, nil
-}
-
-// GenerateToken generate token for user with username
-func GenerateToken(username string) string {
-	config := GetConfigContent()
-	if config == nil {
-		return ""
-	}
-	key := config.TokenKey
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"iss": "go-online",
-		"sub": username,
-		"exp": time.Now().Add(time.Second * 3600 * 30).Unix(),
-		"iat": time.Now().Unix(),
-	})
-	ret, err := token.SignedString(key)
-	if err != nil {
-		fmt.Println(err)
-		return ""
-	}
-	return ret
 }
 
 // GetConfigContent read configure file and return the content
