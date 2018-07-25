@@ -25,6 +25,7 @@ func GetServer() *negroni.Negroni {
 	files := projects.PathPrefix("/{projectname}/files").Subrouter()
 
 	// user collection
+	users.Handle("", controller.ErrorHandler(controller.CreateUserHandler)).Methods("POST")
 	users.Handle("/{username}", controller.ErrorHandler(controller.UpdateUserMessageHandler)).Methods("PATCH")
 	users.Handle("/{username}", controller.ErrorHandler(controller.GetUserMessageHandler)).Methods("GET")
 	// project collection

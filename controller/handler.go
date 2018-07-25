@@ -232,3 +232,9 @@ func UpdateUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
 func GetUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
+
+// CreateUserHandler handle sign up
+func CreateUserHandler(w http.ResponseWriter, r *http.Request) error {
+	
+	return nil
+}

@@ -11,15 +11,16 @@ import (
 
 // ClientDebugMessage stores the data received from user
 type ClientDebugMessage struct {
-	BreakPoints []string
+	BreakPoints string
 	Command     string
 }
 
 // ResponseDebugMessage stores the data to be sent to the client
 type ResponseDebugMessage struct {
 	Event       string
-	CurrentLint string
-	Info        string
+	CurrentLine string
+	Message     string
+	AddOn       string
 }
 
 // VaribleInformation stores information of varible
@@ -33,13 +34,6 @@ type VaribleInformation struct {
 type DebugOutPut struct {
 	Type    string                 `json:"type"`
 	Message map[string]interface{} `json:"msg"`
-}
-
-// GDBOutput stores gdb output
-type GDBOutput struct {
-	Type    string `json:"type"`
-	Class   string `json:"class"`
-	Payload string `json:"payload"`
 }
 
 // SendDebugMsgToClient send debug message to client
@@ -118,8 +112,6 @@ func handleDebugMessage(mType int, msg []byte, conn *websocket.Conn, isFirst boo
 			fmt.Println(err)
 			return err
 		}
-		// err = conn.WriteMessage(mType, []byte("file-exec-and-symbols Debug/"+projectName+"\n"))
-		// err = conn.WriteMessage(mType, []byte("file-exec-and-symbols Debug/"+"main"+"\n"))
 		if err != nil {
 			fmt.Println(err)
 			return err
@@ -133,40 +125,33 @@ func handleDebugMessage(mType int, msg []byte, conn *websocket.Conn, isFirst boo
 	}
 	// Send message
 	msgsToBeSent := parseClientMessage(&clientJSON)
-	for _, v := range msgsToBeSent {
-		v += "\n"
-		err = conn.WriteMessage(mType, []byte(v))
-		if err != nil {
-			fmt.Println(err)
-			return err
-		}
+	err = conn.WriteMessage(mType, []byte(msgsToBeSent+"\n"))
+	if err != nil {
+		fmt.Println(err)
+		return err
 	}
 	return nil
 }
 
-func parseClientMessage(msg *ClientDebugMessage) []string {
+func parseClientMessage(msg *ClientDebugMessage) string {
 	command := msg.Command
 	switch command {
 	case "run":
-		return []string{"exec-run"}
+		return "exec-run"
 	case "quit":
-		return []string{"quit"}
+		return "quit"
 	case "next":
-		return []string{"exec-next"}
+		return "exec-next"
 	case "continue":
-		return []string{"exec-continue"}
+		return "exec-continue"
 	case "set":
-		ret := []string{}
 		// TODO: check breakpoint format
-		for _, v := range msg.BreakPoints {
-			ret = append(ret, "break-insert "+v)
-		}
-		return ret
+		return "break-insert " + msg.BreakPoints
 	case "delete":
-		// TODO: get break list from debug server and delete line
-		return []string{}
+		// TODO: check breakpoint format
+		return "break-delete " + msg.BreakPoints
 	default:
-		return []string{}
+		return ""
 	}
 }
 
@@ -175,34 +160,38 @@ func parseDebugInterface(msg map[string]interface{}, t string) []byte {
 	if t == "output" {
 		// output event
 		response.Event = "output"
-		response.Info = msg["msg"].(string)
+		response.Message = msg["msg"].(string)
 	} else if t == "error" {
 		// error event
 		response.Event = "error"
-		response.Info = msg["error"].(string)
+		response.Message = msg["error"].(string)
 	} else if t == "gdb" {
-		if msg["class"] != nil {
-			if msg["class"].(string) == "stopped" {
-				payload := msg["payload"].(map[string]interface{})
-				if len(payload) != 0 {
-					reason := payload["reason"].(string)
-					if reason == "exited-normally" {
-						// finish event
-						response.Event = "finish"
-					} else if reason == "breakpoint-hit" {
-						frame := payload["fullname"].(map[string]interface{})
-						// TODO: parse relative path with fullname and file
-						// fullname := frame["fullname"].(string)
-						file := frame["fullname"].(string)
-						line := frame["line"].(string)
-						// stop event
-						response.Event = "stop"
-						response.CurrentLint = file + ":" + line
-					}
+		command := msg["command"].(string)
+		if command == "" {
+			if msg["class"] != nil {
+				if msg["class"].(string) == "stopped" {
+					stopDebugEvent(msg, &response)
 				}
-			} else if msg["class"].(string) == "thread-group-added" {
-				// start event
-				response.Event = "start"
+			}
+		}
+		// TODO: handle failed condition
+		if command[:12] == "break-insert" {
+			breakPointAddedEvent(msg, &response)
+		} else if command == "file-exec-and-symbols" {
+			if msg["class"] != nil && msg["class"].(string) == "done" {
+				response.Event = "done"
+				response.Message = "loaded"
+			}
+		} else if command[:12] == "break-delete" {
+			if msg["class"] != nil && msg["class"].(string) == "done" {
+				response.Event = "done"
+				response.Message = "bk-del"
+				response.AddOn = command[13:]
+			}
+		} else if command == "exec-run" {
+			if msg["class"] != nil && msg["class"].(string) == "running" {
+				response.Event = "done"
+				response.Message = "running"
 			}
 		}
 	}
@@ -211,4 +200,54 @@ func parseDebugInterface(msg map[string]interface{}, t string) []byte {
 		return byteResponse
 	}
 	return []byte{}
+}
+
+func breakPointAddedEvent(msg map[string]interface{}, response *ResponseDebugMessage) {
+	if msg["class"] == nil {
+		return
+	}
+	if msg["class"].(string) == "done" {
+		response.Event = "done"
+		response.Message = "bk-add"
+		payload := msg["payload"].(map[string]interface{})
+		if payload != nil {
+			// breakpoint event
+			bkpt := payload["bkpt"].(map[string]interface{})
+			if bkpt != nil {
+				// TODO: parse relative path with fullname and file
+				// fullname := bkpt["fullname"].(string)
+				file := bkpt["fullname"].(string)
+				line := bkpt["line"].(string)
+				number := bkpt["number"].(string)
+				response.CurrentLine = file + ":" + line
+				response.AddOn = number
+			}
+		}
+	}
+}
+
+func stopDebugEvent(msg map[string]interface{}, response *ResponseDebugMessage) {
+	payload := msg["payload"].(map[string]interface{})
+	if len(payload) != 0 {
+		reason := payload["reason"].(string)
+		if reason == "exited-normally" {
+			// finish event
+			response.Event = "finish"
+		} else if reason == "breakpoint-hit" {
+			frame := payload["fullname"].(map[string]interface{})
+			// TODO: parse relative path with fullname and file
+			// fullname := frame["fullname"].(string)
+			file := frame["fullname"].(string)
+			line := frame["line"].(string)
+			// stop event
+			response.Event = "stop"
+			response.CurrentLine = file + ":" + line
+		} else if reason == "end-stepping-range" {
+			// stop event
+			line := payload["line"].(string)
+			file := payload["file"].(string)
+			response.Event = "stop"
+			response.CurrentLine = file + ":" + line
+		}
+	}
 }
