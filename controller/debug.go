@@ -71,13 +71,14 @@ func handleClientDebugMessage(isFirst *bool, ws *websocket.Conn, sConn *websocke
 	// Init the connection to the docker serveice
 	if *isFirst {
 		tmp, err := initDockerConnection(string(msg), "debug")
-		sConn = tmp
 		if err != nil {
 			panic(err)
 		}
+		sConn = tmp
 		// Listen message from docker service and send to client connection
 		go sendDebugMsgToClient(ws, sConn)
 	}
+	// fmt.Println(string(msg))
 
 	if sConn == nil {
 		fmt.Fprintf(os.Stderr, "Invalid command.")
@@ -106,6 +107,7 @@ func handleDebugMessage(mType int, msg []byte, conn *websocket.Conn, isFirst boo
 			UserName:    username,
 			ProjectName: projectName,
 			Type:        "debug",
+			Command:     "/main",
 		}
 		err = conn.WriteJSON(*workSpace)
 		if err != nil {
@@ -116,6 +118,7 @@ func handleDebugMessage(mType int, msg []byte, conn *websocket.Conn, isFirst boo
 			fmt.Println(err)
 			return err
 		}
+		return nil
 	}
 	// parse client json data
 	clientJSON := ClientDebugMessage{}
@@ -157,6 +160,10 @@ func parseClientMessage(msg *ClientDebugMessage) string {
 
 func parseDebugInterface(msg map[string]interface{}, t string) []byte {
 	var response ResponseDebugMessage
+	var command string
+	if msg["command"] != nil {
+		command = msg["command"].(string)
+	}
 	if t == "output" {
 		// output event
 		response.Event = "output"
@@ -164,34 +171,38 @@ func parseDebugInterface(msg map[string]interface{}, t string) []byte {
 	} else if t == "error" {
 		// error event
 		response.Event = "error"
-		response.Message = msg["error"].(string)
+		if command == "file-exec-and-symbols" {
+			response.Message = "load"
+		} else if len(command) >= 12 && command[:12] == "break-insert" {
+			response.Message = "bk-add"
+		}
 	} else if t == "gdb" {
-		command := msg["command"].(string)
 		if command == "" {
 			if msg["class"] != nil {
 				if msg["class"].(string) == "stopped" {
 					stopDebugEvent(msg, &response)
 				}
 			}
-		}
-		// TODO: handle failed condition
-		if command[:12] == "break-insert" {
-			breakPointAddedEvent(msg, &response)
-		} else if command == "file-exec-and-symbols" {
-			if msg["class"] != nil && msg["class"].(string) == "done" {
-				response.Event = "done"
-				response.Message = "loaded"
-			}
-		} else if command[:12] == "break-delete" {
-			if msg["class"] != nil && msg["class"].(string) == "done" {
-				response.Event = "done"
-				response.Message = "bk-del"
-				response.AddOn = command[13:]
-			}
-		} else if command == "exec-run" {
-			if msg["class"] != nil && msg["class"].(string) == "running" {
-				response.Event = "done"
-				response.Message = "running"
+		} else {
+			// TODO: handle failure condition
+			if len(command) >= 12 && command[:12] == "break-insert" {
+				breakPointAddedEvent(msg, &response)
+			} else if command == "file-exec-and-symbols" {
+				if msg["class"] != nil && msg["class"].(string) == "done" {
+					response.Event = "done"
+					response.Message = "loaded"
+				}
+			} else if len(command) >= 14 && command[:12] == "break-delete" {
+				if msg["class"] != nil && msg["class"].(string) == "done" {
+					response.Event = "done"
+					response.Message = "bk-del"
+					response.AddOn = command[13:]
+				}
+			} else if command == "exec-run" || command == "exec-next" || command == "exec-continue" {
+				if msg["class"] != nil && msg["class"].(string) == "running" {
+					response.Event = "done"
+					response.Message = "running"
+				}
 			}
 		}
 	}
@@ -215,11 +226,11 @@ func breakPointAddedEvent(msg map[string]interface{}, response *ResponseDebugMes
 			bkpt := payload["bkpt"].(map[string]interface{})
 			if bkpt != nil {
 				// TODO: parse relative path with fullname and file
-				// fullname := bkpt["fullname"].(string)
-				file := bkpt["fullname"].(string)
+				fullname := bkpt["fullname"].(string)
+				// file := bkpt["file"].(string)
 				line := bkpt["line"].(string)
 				number := bkpt["number"].(string)
-				response.CurrentLine = file + ":" + line
+				response.CurrentLine = fullname + ":" + line
 				response.AddOn = number
 			}
 		}
@@ -234,20 +245,23 @@ func stopDebugEvent(msg map[string]interface{}, response *ResponseDebugMessage) 
 			// finish event
 			response.Event = "finish"
 		} else if reason == "breakpoint-hit" {
-			frame := payload["fullname"].(map[string]interface{})
+			frame := payload["frame"].(map[string]interface{})
 			// TODO: parse relative path with fullname and file
-			// fullname := frame["fullname"].(string)
-			file := frame["fullname"].(string)
+			fullname := frame["fullname"].(string)
+			// file := frame["file"].(string)
 			line := frame["line"].(string)
 			// stop event
 			response.Event = "stop"
-			response.CurrentLine = file + ":" + line
+			response.CurrentLine = fullname + ":" + line
 		} else if reason == "end-stepping-range" {
 			// stop event
-			line := payload["line"].(string)
-			file := payload["file"].(string)
+			frame := payload["frame"].(map[string]interface{})
+			// TODO: parse relative path with fullname and file
+			fullname := frame["fullname"].(string)
+			// file := frame["file"].(string)
+			line := frame["line"].(string)
 			response.Event = "stop"
-			response.CurrentLine = file + ":" + line
+			response.CurrentLine = fullname + ":" + line
 		}
 	}
 }
