@@ -213,9 +213,11 @@ func DebugHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Handle messages from the channel
+	// Init docker service connection
 	isFirst := true
-	var sConn *websocket.Conn
+	sConn := handleClientDebugMessage(&isFirst, ws, nil, msgType, []byte{})
+
+	// Handle messages from the channel
 	for msg := range clientMsg {
 		conn := handleClientDebugMessage(&isFirst, ws, sConn, msgType, msg)
 		sConn = conn
@@ -230,5 +232,11 @@ func UpdateUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
 
 // GetUserMessageHandler get user information
 func GetUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+// CreateUserHandler handle sign up
+func CreateUserHandler(w http.ResponseWriter, r *http.Request) error {
+
 	return nil
 }

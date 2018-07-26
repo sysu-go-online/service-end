@@ -11,7 +11,6 @@
 - DEVELOP 是否为开发环境，默认为false
 - DOCKER_ADDRESS 容器服务地址，默认为localhost
 - DOCKER_PORT 容器服务端口，默认为8888
-- CONFI_FILE_PATH 相关配置文件位置，默认为`/config/config.yml`
 
 ## 依赖的外部软件
 
@@ -22,19 +21,3 @@
 ## 运行方式
 
 `go run main`
-
-## 测试版本相关说明
-
-- 根目录
-
-  每个用户根目录始终为/home/:username/
-
-  每个项目根目录始终为/home/:username/src/github.com/:github_username/:projectname
-
-- 用户
-
-  默认全局用户名为golang
-
-- 项目
-
-  默认全局项目名为test
