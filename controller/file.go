@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 
-	dao "github.com/sysu-go-online/service-end/model/service"
+	"github.com/sysu-go-online/service-end/model"
 )
 
 // var username = "golang"
@@ -33,7 +33,7 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectName, userName, filePath, string(body), false, false)
+		err := model.UpdateFileContent(projectName, userName, filePath, string(body), false, false)
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func CreateFileHandler(w http.ResponseWriter, r *http.Request) error {
 
 	if ok {
 		// Save file
-		err := dao.UpdateFileContent(projectName, userName, filePath, "", true, dir)
+		err := model.UpdateFileContent(projectName, userName, filePath, "", true, dir)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func GetFileContentHandler(w http.ResponseWriter, r *http.Request) error {
 	ok := checkFilePath(filePath)
 	if ok {
 		// Load file
-		content, err := dao.GetFileContent(projectName, userName, filePath)
+		content, err := model.GetFileContent(projectName, userName, filePath)
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) error {
 	ok := checkFilePath(filePath)
 	if ok {
 		// Load file
-		err := dao.DeleteFile(projectName, userName, filePath)
+		err := model.DeleteFile(projectName, userName, filePath)
 		if err != nil {
 			return err
 		}
@@ -139,7 +139,7 @@ func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) error {
 	userName := vars["username"]
 
 	// Get file structure
-	structure, err := dao.GetFileStructure(projectName, userName)
+	structure, err := model.GetFileStructure(projectName, userName)
 	if err != nil {
 		return err
 	}
