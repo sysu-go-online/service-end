@@ -122,8 +122,13 @@ func CheckEmail(email string) bool {
 
 // HashPassword return hash of password
 func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
+}
+
+// CompasePassword compare raw password with hashed one
+func CompasePassword(raw, hashed string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(hashed), []byte(raw)) == nil
 }
 
 // GenerateUserName generate unique userid
@@ -144,15 +149,33 @@ func CheckUsername(username string) bool {
 	return false
 }
 
-// CheckJWT check whether the jwt is valid
+// CheckJWT check whether the jwt is valid and if it is in the invalid database
 func CheckJWT(jwtString string) (bool, error) {
+	isValid, err := ValidateToken(jwtString)
+	if err != nil {
+		return false, err
+	}
+	if !isValid {
+		return false, nil
+	}
+
+	has, err := model.IsJWTExist(jwtString, RedisClient)
+	return !has, err
+}
+
+// ValidateToken check the format of token
+func ValidateToken(jwtString string) (bool, error) {
 	// validate jwt
 	token, err := jwt.Parse(jwtString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		return JWTKey, nil
+		return []byte(JWTKey), nil
 	})
+	if err != nil {
+		fmt.Println(err)
+		return false, err
+	}
 
 	// parse time from jwt
 	var exp int64
@@ -161,16 +184,14 @@ func CheckJWT(jwtString string) (bool, error) {
 		if expired == nil {
 			return false, nil
 		}
-		exp = claims["exp"].(int64)
+		exp = int64(expired.(float64))
 		if time.Now().Unix() > exp {
 			return false, nil
 		}
 	} else {
 		return false, nil
 	}
-
-	has, err := model.IsJWTExist(jwtString, RedisClient)
-	return !has, err
+	return true, nil
 }
 
 // GenerateJWT generate token for user
@@ -182,6 +203,5 @@ func GenerateJWT(email string) (string, error) {
 		"jti": generateUUID(),
 	})
 
-	// Sign and get the complete encoded token as a string using the secret
-	return token.SignedString(JWTKey)
+	return token.SignedString([]byte(JWTKey))
 }

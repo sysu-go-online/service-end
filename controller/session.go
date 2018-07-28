@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -21,19 +22,17 @@ func LogInHandler(w http.ResponseWriter, r *http.Request) error {
 	// check email and password
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return err
+		w.WriteHeader(400)
+		return nil
 	}
 	user := UserController{}
 	if err := json.Unmarshal(body, &user); err != nil {
-		return err
+		w.WriteHeader(400)
+		return nil
 	}
 	if ok := CheckEmail(user.Email); !ok {
 		w.WriteHeader(400)
 		return nil
-	}
-	pass, err := HashPassword(user.Password)
-	if err != nil {
-		return err
 	}
 	user.User.Email = user.Email
 
@@ -48,7 +47,7 @@ func LogInHandler(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(400)
 		return nil
 	}
-	if pass != user.User.Password {
+	if !CompasePassword(user.Password, user.User.Password) {
 		w.WriteHeader(400)
 		return nil
 	}
@@ -65,8 +64,10 @@ func LogInHandler(w http.ResponseWriter, r *http.Request) error {
 // LogOutHandler handler logout event
 func LogOutHandler(w http.ResponseWriter, r *http.Request) error {
 	token := r.Header.Get("Authorization")
-	if valid, err := CheckJWT(token); err != nil {
-		return err
+	if valid, err := ValidateToken(token); err != nil {
+		fmt.Println(err)
+		w.WriteHeader(400)
+		return nil
 	} else {
 		if !valid {
 			w.WriteHeader(401)

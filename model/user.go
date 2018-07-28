@@ -21,7 +21,7 @@ func (u User) TableName() string {
 
 // Insert a user to the table
 func (u *User) Insert(session *xorm.Session) (int, error) {
-	affected, err := session.InsertOne(&u)
+	affected, err := session.InsertOne(u)
 	if err != nil {
 		fmt.Println(err)
 		return 0, err

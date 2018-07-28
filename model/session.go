@@ -14,12 +14,16 @@ var JWTKey = "go-online"
 // AddInvalidJWT add invalid jwt to the database
 func AddInvalidJWT(jwtString string, client *redis.Client) error {
 	// validate jwt
-	token, _ := jwt.Parse(jwtString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(jwtString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		return JWTKey, nil
+		return []byte(JWTKey), nil
 	})
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
 
 	// parse time from jwt
 	var exp int64
@@ -28,7 +32,7 @@ func AddInvalidJWT(jwtString string, client *redis.Client) error {
 		if expired == nil {
 			return nil
 		}
-		exp = claims["exp"].(int64)
+		exp = int64(expired.(float64))
 		if time.Now().Unix() > exp {
 			return nil
 		}
@@ -41,11 +45,12 @@ func AddInvalidJWT(jwtString string, client *redis.Client) error {
 
 // IsJWTExist judge if the token in redis
 func IsJWTExist(tokenString string, client *redis.Client) (bool, error) {
-	_, err := client.Get("key2").Result()
+	_, err := client.Get(tokenString).Result()
 	if err == redis.Nil {
 		return false, nil
 	}
 	if err != nil {
+		fmt.Println(err)
 		return false, err
 	}
 	return true, nil

@@ -59,7 +59,8 @@ func init() {
 	})
 	RedisClient = client
 
-	pong, err := client.Ping().Result()
-	fmt.Println(pong, err)
-	// Output: PONG <nil>
+	if os.Getenv("DEBUG") == "TRUE" {
+		pong, err := client.Ping().Result()
+		fmt.Println(pong, err)
+	}
 }
