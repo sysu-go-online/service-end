@@ -2,10 +2,48 @@ package controller
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+// WebSocketTermHandler is a middle way handler to connect web app with docker service
+func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	// Set TextMessage as default
+	msgType := websocket.TextMessage
+	clientMsg := make(chan []byte)
+	if err != nil {
+		panic(err)
+	}
+	defer ws.Close()
+
+	// Open a goroutine to receive message from client connection
+	go readFromClient(clientMsg, ws)
+
+	go func() {
+		for {
+			timer := time.NewTimer(time.Second * 2)
+			<-timer.C
+			err := ws.WriteControl(websocket.PingMessage, []byte("ping"), time.Time{})
+			if err != nil {
+				timer.Stop()
+				return
+			}
+		}
+	}()
+
+	// Handle messages from the channel
+	isFirst := true
+	var sConn *websocket.Conn
+	for msg := range clientMsg {
+		conn := handlerClientTTYMsg(&isFirst, ws, sConn, msgType, msg)
+		sConn = conn
+	}
+	sConn.Close()
+}
 
 // HandlerClientMsg handle message from client and send it to docker service
 func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte) (conn *websocket.Conn) {

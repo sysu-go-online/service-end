@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 
 	"github.com/sysu-go-online/service-end/model"
 )
@@ -148,95 +146,5 @@ func GetFileStructureHandler(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	w.Write(ret)
-	return nil
-}
-
-// WebSocketTermHandler is a middle way handler to connect web app with docker service
-func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
-	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	// Set TextMessage as default
-	msgType := websocket.TextMessage
-	clientMsg := make(chan []byte)
-	if err != nil {
-		panic(err)
-	}
-	defer ws.Close()
-
-	// Open a goroutine to receive message from client connection
-	go readFromClient(clientMsg, ws)
-
-	go func() {
-		for {
-			timer := time.NewTimer(time.Second * 2)
-			<-timer.C
-			err := ws.WriteControl(websocket.PingMessage, []byte("ping"), time.Time{})
-			if err != nil {
-				timer.Stop()
-				return
-			}
-		}
-	}()
-
-	// Handle messages from the channel
-	isFirst := true
-	var sConn *websocket.Conn
-	for msg := range clientMsg {
-		conn := handlerClientTTYMsg(&isFirst, ws, sConn, msgType, msg)
-		sConn = conn
-	}
-	sConn.Close()
-}
-
-// DebugHandler is a websocket connection and handle debug information
-func DebugHandler(w http.ResponseWriter, r *http.Request) {
-	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
-	// Set TextMessage as default
-	msgType := websocket.TextMessage
-	clientMsg := make(chan []byte)
-	if err != nil {
-		panic(err)
-	}
-	defer ws.Close()
-
-	// Open a goroutine to receive message from client connection
-	go readFromClient(clientMsg, ws)
-
-	go func() {
-		for {
-			timer := time.NewTimer(time.Second * 2)
-			<-timer.C
-			err := ws.WriteControl(websocket.PingMessage, []byte("ping"), time.Time{})
-			if err != nil {
-				timer.Stop()
-				return
-			}
-		}
-	}()
-
-	// Init docker service connection
-	isFirst := true
-	sConn := handleClientDebugMessage(&isFirst, ws, nil, msgType, []byte{})
-
-	// Handle messages from the channel
-	for msg := range clientMsg {
-		conn := handleClientDebugMessage(&isFirst, ws, sConn, msgType, msg)
-		sConn = conn
-	}
-	sConn.Close()
-}
-
-// UpdateUserMessageHandler update user information
-func UpdateUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
-
-// GetUserMessageHandler get user information
-func GetUserMessageHandler(w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
-
-// CreateUserHandler handle sign up
-func CreateUserHandler(w http.ResponseWriter, r *http.Request) error {
-
 	return nil
 }

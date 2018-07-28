@@ -5,12 +5,22 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"regexp"
+	"time"
 
+	"github.com/sysu-go-online/service-end/model"
+
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v2"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/websocket"
+	"github.com/rs/xid"
 	"github.com/sysu-go-online/service-end/types"
 )
+
+// JWTKey defines the token key
+var JWTKey = "go-online"
 
 func checkFilePath(path string) bool {
 	return true
@@ -102,4 +112,76 @@ func GetConfigContent() *types.ConfigFile {
 		return nil
 	}
 	return config
+}
+
+// CheckEmail check if the email is valid
+func CheckEmail(email string) bool {
+	Re := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	return Re.MatchString(email)
+}
+
+// HashPassword return hash of password
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+// GenerateUserName generate unique userid
+func GenerateUserName() string {
+	return "user_" + generateUUID()
+}
+
+func generateUUID() string {
+	guid := xid.New()
+	return guid.String()
+}
+
+// CheckUsername check if the username is valid
+func CheckUsername(username string) bool {
+	if len(username) > 0 {
+		return true
+	}
+	return false
+}
+
+// CheckJWT check whether the jwt is valid
+func CheckJWT(jwtString string) (bool, error) {
+	// validate jwt
+	token, err := jwt.Parse(jwtString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return JWTKey, nil
+	})
+
+	// parse time from jwt
+	var exp int64
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		expired := claims["exp"]
+		if expired == nil {
+			return false, nil
+		}
+		exp = claims["exp"].(int64)
+		if time.Now().Unix() > exp {
+			return false, nil
+		}
+	} else {
+		return false, nil
+	}
+
+	has, err := model.IsJWTExist(jwtString, RedisClient)
+	return !has, err
+}
+
+// GenerateJWT generate token for user
+func GenerateJWT(email string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+		"sub": email,
+		"iat": time.Now().Unix(),
+		"jti": generateUUID(),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	return token.SignedString(JWTKey)
 }

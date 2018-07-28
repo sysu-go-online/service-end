@@ -11,13 +11,19 @@
 - DEVELOP 是否为开发环境，默认为false
 - DOCKER_ADDRESS 容器服务地址，默认为localhost
 - DOCKER_PORT 容器服务端口，默认为8888
+- REDIS_ADDRESS redis地址，默认为localhost
+- REDIS_PORT redis端口，默认为6379
 
 ## 依赖的外部软件
 
 - mysql
 
-  需要包含有go-online数据库，该库包含有project表，具体说明参见技术文档
+  需要包含有`mydb`数据库，具体说明参见技术文档
+
+- redis
+
+  用来存放失效的jwt，具体说明见技术文档
 
 ## 运行方式
 
-`go run main`
+`go run main.go`

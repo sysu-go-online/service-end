@@ -30,13 +30,13 @@ func (u *User) Insert(session *xorm.Session) (int, error) {
 }
 
 // GetWithEmail get user with given email
-func (u *User) GetWithEmail(session *xorm.Session) (bool, error){
+func (u *User) GetWithEmail(session *xorm.Session) (bool, error) {
 	email := u.Email
 	return session.Where("email = ?", email).Get(u)
 }
 
 // GetWithUsername get user with given username
-func (u *User) GetWithUsername(session *xorm.Session) (bool, error){
+func (u *User) GetWithUsername(session *xorm.Session) (bool, error) {
 	username := u.Username
 	return session.Where("username = ?", username).Get(u)
 }

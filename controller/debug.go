@@ -3,8 +3,10 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -34,6 +36,44 @@ type VaribleInformation struct {
 type DebugOutPut struct {
 	Type    string                 `json:"type"`
 	Message map[string]interface{} `json:"msg"`
+}
+
+// DebugHandler is a websocket connection and handle debug information
+func DebugHandler(w http.ResponseWriter, r *http.Request) {
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	// Set TextMessage as default
+	msgType := websocket.TextMessage
+	clientMsg := make(chan []byte)
+	if err != nil {
+		panic(err)
+	}
+	defer ws.Close()
+
+	// Open a goroutine to receive message from client connection
+	go readFromClient(clientMsg, ws)
+
+	go func() {
+		for {
+			timer := time.NewTimer(time.Second * 2)
+			<-timer.C
+			err := ws.WriteControl(websocket.PingMessage, []byte("ping"), time.Time{})
+			if err != nil {
+				timer.Stop()
+				return
+			}
+		}
+	}()
+
+	// Init docker service connection
+	isFirst := true
+	sConn := handleClientDebugMessage(&isFirst, ws, nil, msgType, []byte{})
+
+	// Handle messages from the channel
+	for msg := range clientMsg {
+		conn := handleClientDebugMessage(&isFirst, ws, sConn, msgType, msg)
+		sConn = conn
+	}
+	sConn.Close()
 }
 
 // SendDebugMsgToClient send debug message to client
