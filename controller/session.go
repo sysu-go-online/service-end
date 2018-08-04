@@ -30,15 +30,15 @@ func LogInHandler(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(400)
 		return nil
 	}
-	if ok := CheckEmail(user.Email); !ok {
+	if ok := CheckUsername(user.Username); !ok {
 		w.WriteHeader(400)
 		return nil
 	}
-	user.User.Email = user.Email
+	user.User.Username = user.Username
 
 	// create session to query user
 	session := MysqlEngine.NewSession()
-	has, err := user.User.GetWithEmail(session)
+	has, err := user.User.GetWithUsername(session)
 	if err != nil {
 		session.Rollback()
 		return err
@@ -53,7 +53,7 @@ func LogInHandler(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Generate token for user
-	if token, err := GenerateJWT(user.User.Email); err != nil {
+	if token, err := GenerateJWT(user.User.Username); err != nil {
 		return err
 	} else {
 		w.Header().Add("Authorization", token)

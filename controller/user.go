@@ -14,6 +14,7 @@ import (
 type UserController struct {
 	model.User
 	Email    string `json:"email"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -37,12 +38,17 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(400)
 		return nil
 	}
+	if ok := CheckUsername(user.Username); !ok {
+		w.WriteHeader(400)
+		return nil
+	}
 	pass, err := HashPassword(user.Password)
 	if err != nil {
 		return err
 	}
 	user.User.Email = user.Email
 	user.User.Password = pass
+	user.User.Username = user.Username
 	user.Username = GenerateUserName()
 
 	// create session to add a user

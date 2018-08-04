@@ -120,6 +120,14 @@ func CheckEmail(email string) bool {
 	return Re.MatchString(email)
 }
 
+// CheckUsername check username
+func CheckUsername(username string) bool {
+	if len(username) > 5 && len(username) < 16 {
+		return true
+	}
+	return false
+}
+
 // HashPassword return hash of password
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -139,14 +147,6 @@ func GenerateUserName() string {
 func generateUUID() string {
 	guid := xid.New()
 	return guid.String()
-}
-
-// CheckUsername check if the username is valid
-func CheckUsername(username string) bool {
-	if len(username) > 0 {
-		return true
-	}
-	return false
 }
 
 // CheckJWT check whether the jwt is valid and if it is in the invalid database
@@ -195,10 +195,10 @@ func ValidateToken(jwtString string) (bool, error) {
 }
 
 // GenerateJWT generate token for user
-func GenerateJWT(email string) (string, error) {
+func GenerateJWT(username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
-		"sub": email,
+		"sub": username,
 		"iat": time.Now().Unix(),
 		"jti": generateUUID(),
 	})
