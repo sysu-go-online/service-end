@@ -24,6 +24,7 @@ type UserMessage struct {
 }
 
 // CreateUserHandler handles user sign up
+// TODO: create user home
 func CreateUserHandler(w http.ResponseWriter, r *http.Request) error {
 	r.ParseForm()
 	body, err := ioutil.ReadAll(r.Body)

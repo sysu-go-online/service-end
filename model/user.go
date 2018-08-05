@@ -2,16 +2,18 @@ package model
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-xorm/xorm"
 )
 
 // User correspond user table in mysql
 type User struct {
-	ID       int    `xorm:"pk autoincr 'id'"`
-	Username string `xorm:"notnull unique"`
-	Email    string `xorm:"notnull unique"`
-	Password string `xorm:"notnull"`
+	ID         int        `xorm:"pk autoincr 'id'"`
+	Username   string     `xorm:"notnull unique"`
+	Email      string     `xorm:"notnull unique"`
+	Password   string     `xorm:"notnull"`
+	CreateTime *time.Time `xorm:"created"`
 }
 
 // TableName defines table name
@@ -27,6 +29,12 @@ func (u *User) Insert(session *xorm.Session) (int, error) {
 		return 0, err
 	}
 	return int(affected), nil
+}
+
+// AddUserHome create user home directory
+// TODO:
+func (u *User) AddUserHome() {
+
 }
 
 // GetWithEmail get user with given email
