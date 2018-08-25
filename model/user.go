@@ -2,6 +2,8 @@ package model
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"time"
 
 	"github.com/go-xorm/xorm"
@@ -32,9 +34,9 @@ func (u *User) Insert(session *xorm.Session) (int, error) {
 }
 
 // AddUserHome create user home directory
-// TODO:
-func (u *User) AddUserHome() {
-
+func (u *User) AddUserHome() error {
+	userHome := path.Join("/home", u.Username)
+	return os.MkdirAll(userHome, os.ModeDir)
 }
 
 // GetWithEmail get user with given email
@@ -47,4 +49,10 @@ func (u *User) GetWithEmail(session *xorm.Session) (bool, error) {
 func (u *User) GetWithUsername(session *xorm.Session) (bool, error) {
 	username := u.Username
 	return session.Where("username = ?", username).Get(u)
+}
+
+// GetWithUserID get user with given id
+func (u *User) GetWithUserID(session *xorm.Session) (bool, error) {
+	id := u.ID
+	return session.Where("id = ?", id).Get(u)
 }

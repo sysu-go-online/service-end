@@ -24,7 +24,6 @@ type UserMessage struct {
 }
 
 // CreateUserHandler handles user sign up
-// TODO: create user home
 func CreateUserHandler(w http.ResponseWriter, r *http.Request) error {
 	r.ParseForm()
 	body, err := ioutil.ReadAll(r.Body)
@@ -55,6 +54,11 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) error {
 	// create session to add a user
 	session := MysqlEngine.NewSession()
 	affected, err := user.User.Insert(session)
+	if err != nil {
+		session.Rollback()
+		return err
+	}
+	err = user.User.AddUserHome()
 	if err != nil {
 		session.Rollback()
 		return err

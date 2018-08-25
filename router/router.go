@@ -29,6 +29,10 @@ func GetServer() *negroni.Negroni {
 	users.Handle("", controller.ErrorHandler(controller.CreateUserHandler)).Methods("POST")
 	users.Handle("/{username}", controller.ErrorHandler(controller.GetUserMessageHandler)).Methods("GET")
 
+	// user collection
+	projects.Handle("", controller.ErrorHandler(controller.CreateProjectHandler)).Methods("POST")
+	projects.Handle("", controller.ErrorHandler(controller.ListProjectsHandler)).Methods("GET")
+
 	// session handler
 	sessions.Handle("", controller.ErrorHandler(controller.LogInHandler)).Methods("POST")
 	sessions.Handle("", controller.ErrorHandler(controller.LogOutHandler)).Methods("DELETE")
@@ -40,6 +44,8 @@ func GetServer() *negroni.Negroni {
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.UpdateFileHandler)).Methods("POST")
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.CreateFileHandler)).Methods("PUT")
 	files.Handle("/{filepath:.*}", controller.ErrorHandler(controller.DeleteFileHandler)).Methods("DELETE")
+
+	// project collection
 
 	// Use classic server and return it
 	handler := cors.Default().Handler(r)
