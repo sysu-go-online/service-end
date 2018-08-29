@@ -63,7 +63,11 @@ func (p *Project) CreateProjectRoot(username string) error {
 // GetWithUserID returns projects with given user id
 func (p *Project) GetWithUserID(session *xorm.Session) ([]Project, error) {
 	var ps []Project
-	return nil, session.Where("user_id = ?", p.UserID).Find(&ps)
+	err := session.Where("user_id = ?", p.UserID).Find(&ps)
+	if err != nil {
+		return nil, err
+	}
+	return ps, nil
 }
 
 // GetWithUserIDAndNmae returns project with given user id and project name

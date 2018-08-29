@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/gorilla/mux"
+
 	"github.com/sysu-go-online/service-end/model"
 )
 
@@ -42,9 +44,8 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) error {
 	project.Project.GitPath = project.GitPath
 
 	session := MysqlEngine.NewSession()
-	user := model.User{}
-	user.Username = r.Header["X_Username"][0]
-	has, err := user.GetWithUsername(session)
+	project.User.Username = mux.Vars(r)["username"]
+	has, err := project.User.GetWithUsername(session)
 	if err != nil {
 		session.Rollback()
 		return err
@@ -53,7 +54,7 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(401)
 		return nil
 	}
-	project.Project.UserID = user.ID
+	project.Project.UserID = project.User.ID
 	affected, err := project.Project.Insert(session)
 	if err != nil {
 		session.Rollback()
@@ -76,6 +77,17 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) error {
 func ListProjectsHandler(w http.ResponseWriter, r *http.Request) error {
 	project := ProjectController{}
 	session := MysqlEngine.NewSession()
+	project.User.Username = mux.Vars(r)["username"]
+	has, err := project.User.GetWithUsername(session)
+	if err != nil {
+		session.Rollback()
+		return err
+	}
+	if !has {
+		w.WriteHeader(401)
+		return nil
+	}
+	project.Project.UserID = project.User.ID
 	ps, err := project.Project.GetWithUserID(session)
 	if err != nil {
 		session.Rollback()

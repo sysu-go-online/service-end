@@ -21,7 +21,7 @@ func GetServer() *negroni.Negroni {
 
 	// subrouter
 	users := r.PathPrefix("/users").Subrouter()
-	sessions := r.PathPrefix("/sessions").Subrouter()
+	auth := r.PathPrefix("/auth").Subrouter()
 	projects := users.PathPrefix("/{username}/projects").Subrouter()
 	files := projects.PathPrefix("/{projectname}/files").Subrouter()
 
@@ -34,8 +34,8 @@ func GetServer() *negroni.Negroni {
 	projects.Handle("", controller.ErrorHandler(controller.ListProjectsHandler)).Methods("GET")
 
 	// session handler
-	sessions.Handle("", controller.ErrorHandler(controller.LogInHandler)).Methods("POST")
-	sessions.Handle("", controller.ErrorHandler(controller.LogOutHandler)).Methods("DELETE")
+	auth.Handle("", controller.ErrorHandler(controller.LogInHandler)).Methods("POST")
+	auth.Handle("", controller.ErrorHandler(controller.LogOutHandler)).Methods("DELETE")
 	// project collection
 
 	// file collection
