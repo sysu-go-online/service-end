@@ -18,6 +18,12 @@ type ProjectController struct {
 	GitPath     string `json:"git_path"`
 }
 
+// ListProjectsResponse is response for list projects
+type ListProjectsResponse struct {
+	Name     string `json:"name"`
+	Language int    `json:"language"`
+}
+
 // CreateProjectHandler create project
 func CreateProjectHandler(w http.ResponseWriter, r *http.Request) error {
 	r.ParseForm()
@@ -29,13 +35,25 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) error {
 	if err := json.Unmarshal(body, &project); err != nil {
 		return err
 	}
-	// TODO: check contend
+	// TODO: check content
 	project.Project.Language = project.Language
 	project.Project.Name = project.Name
 	project.Project.Description = project.Description
 	project.Project.GitPath = project.GitPath
+
 	session := MysqlEngine.NewSession()
-	// TODO: get user with jwt
+	user := model.User{}
+	user.Username = r.Header["X_Username"][0]
+	has, err := user.GetWithUsername(session)
+	if err != nil {
+		session.Rollback()
+		return err
+	}
+	if !has {
+		w.WriteHeader(401)
+		return nil
+	}
+	project.Project.UserID = user.ID
 	affected, err := project.Project.Insert(session)
 	if err != nil {
 		session.Rollback()
@@ -54,6 +72,7 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// ListProjectsHandler list projects
 func ListProjectsHandler(w http.ResponseWriter, r *http.Request) error {
 	project := ProjectController{}
 	session := MysqlEngine.NewSession()
@@ -66,6 +85,16 @@ func ListProjectsHandler(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(204)
 		return nil
 	}
-	// TODO: construct return json message
+
+	ret := make([]ListProjectsResponse, 0)
+	for _, v := range ps {
+		tmp := ListProjectsResponse{v.Name, v.Language}
+		ret = append(ret, tmp)
+	}
+	body, err := json.Marshal(ret)
+	if err != nil {
+		return err
+	}
+	w.Write(body)
 	return nil
 }
