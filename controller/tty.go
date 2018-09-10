@@ -14,7 +14,7 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
 	// Set TextMessage as default
 	msgType := websocket.TextMessage
-	clientMsg := make(chan []byte)
+	clientMsg := make(chan RequestCommand)
 	if err != nil {
 		panic(err)
 	}
@@ -39,14 +39,14 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	isFirst := true
 	var sConn *websocket.Conn
 	for msg := range clientMsg {
-		conn := handlerClientTTYMsg(&isFirst, ws, sConn, msgType, msg)
+		conn := handlerClientTTYMsg(&isFirst, ws, sConn, msgType, []byte(msg.Command), msg)
 		sConn = conn
 	}
 	sConn.Close()
 }
 
 // HandlerClientMsg handle message from client and send it to docker service
-func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte) (conn *websocket.Conn) {
+func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte, connectContext RequestCommand) (conn *websocket.Conn) {
 	// Init the connection to the docker serveice
 	if *isFirst {
 		tmp, err := initDockerConnection(string(msg), "tty")
@@ -67,7 +67,7 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 	}
 
 	// Send message to docker service
-	handleTTYMessage(msgType, msg, sConn, *isFirst)
+	handleTTYMessage(msgType, msg, sConn, *isFirst, connectContext)
 	*isFirst = false
 	conn = sConn
 	return
@@ -88,14 +88,14 @@ func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
 }
 
 // HandleMessage decide different operation according to the given json message
-func handleTTYMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool) error {
+func handleTTYMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool, connectContext RequestCommand) error {
 	var workSpace *Command
 	var err error
 	if isFirst {
-		projectName := "test"
-		username := "golang"
-		pwd := getPwd(projectName, username)
-		env := getEnv(projectName, username, "golang")
+		projectName := connectContext.Project
+		username := connectContext.username
+		pwd := getPwd(projectName, username, connectContext.projectType)
+		env := getEnv(projectName, username, connectContext.projectType)
 		workSpace = &Command{
 			Command:     string(msg),
 			PWD:         pwd,

@@ -23,3 +23,12 @@ func (h ErrorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
+
+// RequestCommand stores command and jwt in every ws message
+type RequestCommand struct {
+	Command     string
+	JWT         string
+	Project     string
+	username    string
+	projectType int
+}

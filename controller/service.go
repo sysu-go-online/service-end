@@ -1,10 +1,12 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"time"
 
@@ -21,6 +23,9 @@ import (
 
 // JWTKey defines the token key
 var JWTKey = "go-online"
+
+// ROOT defines the root directory
+var ROOT = "/home"
 
 func checkFilePath(path string) bool {
 	return true
@@ -60,7 +65,7 @@ func dialDockerService(service string) (*websocket.Conn, error) {
 }
 
 // ReadFromClient receive message from client connection
-func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
+func readFromClient(clientChan chan<- RequestCommand, ws *websocket.Conn) {
 	for {
 		_, b, err := ws.ReadMessage()
 		if err != nil {
@@ -74,20 +79,78 @@ func readFromClient(clientChan chan<- []byte, ws *websocket.Conn) {
 			fmt.Fprintln(os.Stderr, "Can not read message.")
 			return
 		}
-		// fmt.Println(string(b))
-		clientChan <- b
+		// Check token
+		msg := RequestCommand{}
+		if err := json.Unmarshal(b, &msg); err != nil {
+			fmt.Fprintln(os.Stderr, "Can not get user token information")
+			ws.Close()
+			close(clientChan)
+			break
+		}
+		ok, username := GetUserNameFromToken(msg.JWT)
+		msg.username = username
+		if !ok {
+			fmt.Fprintln(os.Stderr, "Can not get user token information")
+			ws.Close()
+			close(clientChan)
+			break
+		}
+
+		// Get project information
+		session := MysqlEngine.NewSession()
+		u := model.User{Username: username}
+		ok, err = u.GetWithUsername(session)
+		if !ok {
+			fmt.Fprintln(os.Stderr, "Can not get user information")
+			ws.Close()
+			close(clientChan)
+			break
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			ws.Close()
+			close(clientChan)
+			break
+		}
+		p := model.Project{Name: msg.Project, UserID: u.ID}
+		has, err := p.GetWithUserIDAndName(session)
+		if !has {
+			fmt.Fprintln(os.Stderr, "Can not get project information")
+			ws.Close()
+			close(clientChan)
+			break
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			ws.Close()
+			close(clientChan)
+			break
+		}
+		msg.projectType = p.Language
+
+		clientChan <- msg
 	}
 }
 
 // getPwd return current path of given username
-func getPwd(projectName string, username string) string {
+func getPwd(projectName string, username string, projectType int) string {
 	// Return user root in test version
+	switch projectType {
+	case 0:
+		// golang
+		return filepath.Join(ROOT, "go/src/github.com", username, projectName)
+	case 1:
+		// cpp
+		return filepath.Join(ROOT, username, projectName)
+	}
 	return ""
 }
 
-func getEnv(projectName string, username string, language string) []string {
+func getEnv(projectName string, username string, language int) []string {
 	env := []string{}
-	if language == "golang" {
+	switch language {
+	case 0:
+		// golang
 		env = append(env, "GOPATH=/root/go:/home/go")
 	}
 	return env

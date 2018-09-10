@@ -43,7 +43,7 @@ func DebugHandler(w http.ResponseWriter, r *http.Request) {
 	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
 	// Set TextMessage as default
 	msgType := websocket.TextMessage
-	clientMsg := make(chan []byte)
+	clientMsg := make(chan RequestCommand)
 	if err != nil {
 		panic(err)
 	}
@@ -66,11 +66,11 @@ func DebugHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Init docker service connection
 	isFirst := true
-	sConn := handleClientDebugMessage(&isFirst, ws, nil, msgType, []byte{})
+	sConn := handleClientDebugMessage(&isFirst, ws, nil, msgType, []byte{}, RequestCommand{})
 
 	// Handle messages from the channel
 	for msg := range clientMsg {
-		conn := handleClientDebugMessage(&isFirst, ws, sConn, msgType, msg)
+		conn := handleClientDebugMessage(&isFirst, ws, sConn, msgType, []byte(msg.Command), msg)
 		sConn = conn
 	}
 	sConn.Close()
@@ -107,7 +107,7 @@ func sendDebugMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
 }
 
 func handleClientDebugMessage(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn,
-	msgType int, msg []byte) (conn *websocket.Conn) {
+	msgType int, msg []byte, connectContext RequestCommand) (conn *websocket.Conn) {
 	// Init the connection to the docker serveice
 	if *isFirst {
 		tmp, err := initDockerConnection(string(msg), "debug")
@@ -129,23 +129,21 @@ func handleClientDebugMessage(isFirst *bool, ws *websocket.Conn, sConn *websocke
 	}
 
 	// Send message to docker service
-	handleDebugMessage(msgType, msg, sConn, *isFirst)
+	handleDebugMessage(msgType, msg, sConn, *isFirst, connectContext)
 	*isFirst = false
 	conn = sConn
 	return
 }
 
 // handleDebugMessage parse data and send to docker server
-func handleDebugMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool) error {
+func handleDebugMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool, connectContext RequestCommand) error {
 	var workSpace *Command
 	var err error
 	// send project data to docker server for preparing debug environment
 	if isFirst {
-		projectName := "test"
-		username := "golang"
 		workSpace = &Command{
-			UserName:    username,
-			ProjectName: projectName,
+			UserName:    connectContext.username,
+			ProjectName: connectContext.Project,
 			Type:        "debug",
 			Command:     "/main",
 		}
