@@ -27,6 +27,7 @@ type ListProjectsResponse struct {
 }
 
 // CreateProjectHandler create project
+// TODO: Check if the same name exists
 func CreateProjectHandler(w http.ResponseWriter, r *http.Request) error {
 	r.ParseForm()
 	body, err := ioutil.ReadAll(r.Body)

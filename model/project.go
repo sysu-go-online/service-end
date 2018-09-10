@@ -71,7 +71,7 @@ func (p *Project) GetWithUserID(session *xorm.Session) ([]Project, error) {
 }
 
 // GetWithUserIDAndNmae returns project with given user id and project name
-func (p *Project) GetWithUserIDAndNmae(session *xorm.Session) (bool, error) {
+func (p *Project) GetWithUserIDAndName(session *xorm.Session) (bool, error) {
 	return session.Where("user_id = ?", p.UserID).And("name = ?", p.Name).Get(p)
 }
 

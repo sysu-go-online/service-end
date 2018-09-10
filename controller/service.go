@@ -163,6 +163,35 @@ func CheckJWT(jwtString string) (bool, error) {
 	return !has, err
 }
 
+// GetUserNameFromToken get message from valid token
+func GetUserNameFromToken(jwtString string) (bool, string) {
+	if ok, _ := CheckJWT(jwtString); !ok {
+		return false, ""
+	}
+
+	token, err := jwt.Parse(jwtString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(JWTKey), nil
+	})
+	if err != nil {
+		fmt.Println(err)
+		return false, ""
+	}
+	// parse username from jwt
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		username := claims["sub"]
+		if username == "" {
+			return false, ""
+		}
+		sub := string(username.(string))
+		return true, sub
+	} else {
+		return false, ""
+	}
+}
+
 // ValidateToken check the format of token
 func ValidateToken(jwtString string) (bool, error) {
 	// validate jwt
