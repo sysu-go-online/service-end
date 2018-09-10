@@ -93,10 +93,10 @@ func getFilePath(username string, projectName string, filePath string, projectTy
 	switch projectType {
 	case 0:
 		// golang
-		return filepath.Join(ROOT, "go/src/github.com", username, projectName, filePath)
+		return filepath.Join(ROOT, username, "go/src/github.com", projectName, filePath)
 	case 1:
 		// cpp
-		return filepath.Join(ROOT, username, projectName, filePath)
+		return filepath.Join(ROOT, username, "cpp", projectName, filePath)
 	}
 	return ""
 }
