@@ -89,6 +89,15 @@ func GetFileStructure(projectName string, username string, projectType int) (*Fi
 	return &root, nil
 }
 
+// RenameFile rename file
+func RenameFile(projectName string, username string, rawPathName, afterName string, projectType int) (error) {
+	// Get absolute path
+	absPath := getFilePath(username, projectName, rawPathName, projectType)
+	newPath := getFilePath(username, projectName, afterName, projectType)
+
+	return os.Rename(absPath, newPath)
+}
+
 func getFilePath(username string, projectName string, filePath string, projectType int) string {
 	switch projectType {
 	case 0:

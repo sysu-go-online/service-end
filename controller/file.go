@@ -10,12 +10,25 @@ import (
 	"github.com/sysu-go-online/service-end/model"
 )
 
-// UpdateFileHandler is a handler for update file
+// UpdateFileHandler is a handler for update file or rename
 func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 	// Read body
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return err
+	}
+
+	type temp struct {
+		Operation string `json:"operation"`
+		Content   string `json:"content"`
+	}
+
+	// get operation from body
+	op := &temp{}
+	err = json.Unmarshal(body, op)
+	if err != nil {
+		w.WriteHeader(400)
+		return nil
 	}
 
 	// get username from jwt
@@ -54,8 +67,15 @@ func UpdateFileHandler(w http.ResponseWriter, r *http.Request) error {
 	ok = checkFilePath(filePath)
 
 	if ok {
-		// Save file
-		err := model.UpdateFileContent(projectName, username, filePath, string(body), false, false, p.Language)
+		switch op.Operation {
+		case "update":
+			err = model.UpdateFileContent(projectName, username, filePath, op.Content, false, false, p.Language)
+		case "rename":
+			err = model.RenameFile(projectName, username, filePath, op.Content, p.Language)
+		default:
+			w.WriteHeader(400)
+			return nil
+		}
 		if err != nil {
 			return err
 		}
