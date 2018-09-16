@@ -119,15 +119,22 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 
 // SendMsgToClient send message to client
 func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
+	type res struct {
+		Err string `json:"err"`
+		Msg string `json:"msg"`
+	}
 	for {
-		mType, msg, err := sConn.ReadMessage()
+		_, msg, err := sConn.ReadMessage()
+		r := res{}
 		if err != nil {
 			// Server closed connection
-			fmt.Fprintln(os.Stderr, "Docker service closed the connection")
+			r.Err = err.Error()
+			cConn.WriteJSON(r)
 			cConn.Close()
 			return
 		}
-		cConn.WriteMessage(mType, msg)
+		r.Msg = string(msg)
+		cConn.WriteJSON(r)
 	}
 }
 
