@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"time"
 
@@ -32,7 +31,7 @@ func checkFilePath(path string) bool {
 }
 
 // InitDockerConnection inits the connection to the docker service with the first message received from client
-func initDockerConnection(msg string, service string) (*websocket.Conn, error) {
+func initDockerConnection(service string) (*websocket.Conn, error) {
 	// Just handle command start with `go`
 	conn, err := dialDockerService(service)
 	if err != nil {
@@ -79,54 +78,14 @@ func readFromClient(clientChan chan<- RequestCommand, ws *websocket.Conn) {
 			fmt.Fprintln(os.Stderr, "Can not read message.")
 			return
 		}
-		// Check token
+		// read json message from rws
 		msg := RequestCommand{}
 		if err := json.Unmarshal(b, &msg); err != nil {
-			fmt.Fprintln(os.Stderr, "Can not get user token information")
+			fmt.Fprintln(os.Stderr, "Can not parse data")
 			ws.Close()
 			close(clientChan)
 			break
 		}
-		ok, username := GetUserNameFromToken(msg.JWT)
-		msg.username = username
-		if !ok {
-			fmt.Fprintln(os.Stderr, "Can not get user token information")
-			ws.Close()
-			close(clientChan)
-			break
-		}
-
-		// Get project information
-		session := MysqlEngine.NewSession()
-		u := model.User{Username: username}
-		ok, err = u.GetWithUsername(session)
-		if !ok {
-			fmt.Fprintln(os.Stderr, "Can not get user information")
-			ws.Close()
-			close(clientChan)
-			break
-		}
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			ws.Close()
-			close(clientChan)
-			break
-		}
-		p := model.Project{Name: msg.Project, UserID: u.ID}
-		has, err := p.GetWithUserIDAndName(session)
-		if !has {
-			fmt.Fprintln(os.Stderr, "Can not get project information")
-			ws.Close()
-			close(clientChan)
-			break
-		}
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			ws.Close()
-			close(clientChan)
-			break
-		}
-		msg.projectType = p.Language
 
 		clientChan <- msg
 	}
@@ -134,16 +93,8 @@ func readFromClient(clientChan chan<- RequestCommand, ws *websocket.Conn) {
 
 // getPwd return current path of given username
 func getPwd(projectName string, username string, projectType int) string {
-	// Return user root in test version
-	switch projectType {
-	case 0:
-		// golang
-		return filepath.Join(ROOT, "go/src/github.com", username, projectName)
-	case 1:
-		// cpp
-		return filepath.Join(ROOT, username, projectName)
-	}
-	return ""
+	// TODO: return according to the context
+	return "/"
 }
 
 func getEnv(projectName string, username string, language int) []string {

@@ -110,7 +110,7 @@ func handleClientDebugMessage(isFirst *bool, ws *websocket.Conn, sConn *websocke
 	msgType int, msg []byte, connectContext RequestCommand) (conn *websocket.Conn) {
 	// Init the connection to the docker serveice
 	if *isFirst {
-		tmp, err := initDockerConnection(string(msg), "debug")
+		tmp, err := initDockerConnection("debug")
 		if err != nil {
 			panic(err)
 		}

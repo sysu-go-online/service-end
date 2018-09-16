@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sysu-go-online/service-end/model"
 )
 
 // WebSocketTermHandler is a middle way handler to connect web app with docker service
@@ -23,6 +24,7 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	// Open a goroutine to receive message from client connection
 	go readFromClient(clientMsg, ws)
 
+	// keep connection
 	go func() {
 		for {
 			timer := time.NewTimer(time.Second * 2)
@@ -39,17 +41,59 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	isFirst := true
 	var sConn *websocket.Conn
 	for msg := range clientMsg {
-		conn := handlerClientTTYMsg(&isFirst, ws, sConn, msgType, []byte(msg.Command), msg)
+		conn := handlerClientTTYMsg(&isFirst, ws, sConn, msgType, &msg)
 		sConn = conn
 	}
 	sConn.Close()
 }
 
 // HandlerClientMsg handle message from client and send it to docker service
-func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, msg []byte, connectContext RequestCommand) (conn *websocket.Conn) {
+func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, connectContext *RequestCommand) (conn *websocket.Conn) {
 	// Init the connection to the docker serveice
 	if *isFirst {
-		tmp, err := initDockerConnection(string(msg), "tty")
+		// check token
+		ok, username := GetUserNameFromToken(connectContext.JWT)
+		connectContext.username = username
+		if !ok {
+			fmt.Fprintln(os.Stderr, "Can not get user token information")
+			ws.Close()
+			conn = nil
+			return
+		}
+
+		// Get project information
+		session := MysqlEngine.NewSession()
+		u := model.User{Username: username}
+		ok, err := u.GetWithUsername(session)
+		if !ok {
+			fmt.Fprintln(os.Stderr, "Can not get user information")
+			ws.Close()
+			conn = nil
+			return
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			ws.Close()
+			conn = nil
+			return
+		}
+		p := model.Project{Name: connectContext.Project, UserID: u.ID}
+		has, err := p.GetWithUserIDAndName(session)
+		if !has {
+			fmt.Fprintln(os.Stderr, "Can not get project information")
+			ws.Close()
+			conn = nil
+			return
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			ws.Close()
+			conn = nil
+			return
+		}
+		connectContext.projectType = p.Language
+
+		tmp, err := initDockerConnection("tty")
 		sConn = tmp
 		if err != nil {
 			panic(err)
@@ -67,7 +111,7 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 	}
 
 	// Send message to docker service
-	handleTTYMessage(msgType, msg, sConn, *isFirst, connectContext)
+	handleTTYMessage(msgType, sConn, *isFirst, connectContext)
 	*isFirst = false
 	conn = sConn
 	return
@@ -88,7 +132,7 @@ func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
 }
 
 // HandleMessage decide different operation according to the given json message
-func handleTTYMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool, connectContext RequestCommand) error {
+func handleTTYMessage(mType int, conn *websocket.Conn, isFirst bool, connectContext *RequestCommand) error {
 	var workSpace *Command
 	var err error
 	if isFirst {
@@ -97,7 +141,7 @@ func handleTTYMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool,
 		pwd := getPwd(projectName, username, connectContext.projectType)
 		env := getEnv(projectName, username, connectContext.projectType)
 		workSpace = &Command{
-			Command:     string(msg),
+			Command:     connectContext.Command,
 			PWD:         pwd,
 			ENV:         env,
 			UserName:    username,
@@ -110,7 +154,7 @@ func handleTTYMessage(mType int, msg []byte, conn *websocket.Conn, isFirst bool,
 	if isFirst {
 		err = conn.WriteJSON(*workSpace)
 	} else {
-		err = conn.WriteMessage(mType, msg)
+		err = conn.WriteMessage(mType, []byte(connectContext.Command))
 	}
 	if err != nil {
 		return err
