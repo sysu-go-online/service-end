@@ -31,7 +31,8 @@ func init() {
 	var err error
 	engine, err := xorm.NewEngine("mysql", url)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 	MysqlEngine = engine
 	if os.Getenv("DEVELOP") == "TRUE" {

@@ -17,7 +17,8 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 	msgType := websocket.TextMessage
 	clientMsg := make(chan RequestCommand)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 	defer ws.Close()
 
@@ -50,12 +51,19 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 // HandlerClientMsg handle message from client and send it to docker service
 func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, connectContext *RequestCommand) (conn *websocket.Conn) {
 	// Init the connection to the docker serveice
+	type res struct {
+		Err string `json:"err"`
+		Msg string `json:"msg"`
+	}
+	r := res{}
 	if *isFirst {
 		// check token
 		ok, username := GetUserNameFromToken(connectContext.JWT)
 		connectContext.username = username
 		if !ok {
 			fmt.Fprintln(os.Stderr, "Can not get user token information")
+			r.Err = "Invalid token"
+			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
 			return
@@ -67,12 +75,16 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 		ok, err := u.GetWithUsername(session)
 		if !ok {
 			fmt.Fprintln(os.Stderr, "Can not get user information")
+			r.Err = "Invalid user information"
+			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
 			return
 		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
+			r.Err = err.Error()
+			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
 			return
@@ -81,12 +93,16 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 		has, err := p.GetWithUserIDAndName(session)
 		if !has {
 			fmt.Fprintln(os.Stderr, "Can not get project information")
+			r.Err = "Can not get project information"
+			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
 			return
 		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
+			r.Err = err.Error()
+			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
 			return
@@ -96,7 +112,10 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 		tmp, err := initDockerConnection("tty")
 		sConn = tmp
 		if err != nil {
-			panic(err)
+			fmt.Println("Can not connect to the docker service")
+			r.Err = "Server error"
+			ws.WriteJSON(r)
+			ws.Close()
 		}
 		// Listen message from docker service and send to client connection
 		go sendTTYMsgToClient(ws, sConn)
@@ -125,6 +144,7 @@ func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
 	}
 	for {
 		_, msg, err := sConn.ReadMessage()
+		fmt.Print(string(msg))
 		r := res{}
 		if err != nil {
 			// Server closed connection

@@ -45,7 +45,8 @@ func DebugHandler(w http.ResponseWriter, r *http.Request) {
 	msgType := websocket.TextMessage
 	clientMsg := make(chan RequestCommand)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		return
 	}
 	defer ws.Close()
 
@@ -112,7 +113,8 @@ func handleClientDebugMessage(isFirst *bool, ws *websocket.Conn, sConn *websocke
 	if *isFirst {
 		tmp, err := initDockerConnection("debug")
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
+			return
 		}
 		sConn = tmp
 		// Listen message from docker service and send to client connection
