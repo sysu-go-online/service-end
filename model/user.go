@@ -36,7 +36,27 @@ func (u *User) Insert(session *xorm.Session) (int, error) {
 // AddUserHome create user home directory
 func (u *User) AddUserHome() error {
 	userHome := path.Join("/home", u.Username)
-	return os.MkdirAll(userHome, os.ModeDir)
+	userGit := path.Join(userHome, "git")
+	err := os.MkdirAll(userHome, os.ModeDir)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(userGit, os.ModeDir)
+	if err != nil {
+		return err
+	}
+	// add gitconfig and .gitconfig file
+	f, err := os.OpenFile(path.Join(userGit, "gitconfig"), os.O_RDONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	f.Close()
+	f, err = os.OpenFile(path.Join(userGit, ".gitconfig"), os.O_RDONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return err
+	}
+	f.Close()
+	return nil
 }
 
 // GetWithEmail get user with given email
