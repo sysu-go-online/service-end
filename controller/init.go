@@ -14,8 +14,11 @@ import (
 // MysqlEngine is mysql engine
 var MysqlEngine *xorm.Engine
 
-// RedisClient is redis client
-var RedisClient *redis.Client
+// AuthRedisClient is redis client storing invalid auth information
+var AuthRedisClient *redis.Client
+
+// DomainNameRedisClient is redis client storing used domain name
+var DomainNameRedisClient *redis.Client
 
 func init() {
 	// init mysql connection
@@ -58,7 +61,14 @@ func init() {
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
-	RedisClient = client
+	AuthRedisClient = client
+
+	client = redis.NewClient(&redis.Options{
+		Addr:     REDISADDRESS + REDISPORT,
+		Password: "", // no password set
+		DB:       1,  // use domain name DB
+	})
+	DomainNameRedisClient = client
 
 	if os.Getenv("DEBUG") == "TRUE" {
 		pong, err := client.Ping().Result()

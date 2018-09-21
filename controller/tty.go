@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -109,6 +110,31 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 		}
 		connectContext.projectType = p.Language
 
+		// Check if the command is system command
+		command := strings.Split(connectContext.Command, " ")
+		mapping := &PortMapping{}
+		if len(command) <= 0 {
+			fmt.Fprintln(os.Stderr, "Can not parse command")
+			r.Err = "invalid command"
+			ws.WriteJSON(r)
+			ws.Close()
+			conn = nil
+			return
+		}
+		if command[0] == "go-online" {
+			// parse command
+			mapping, err = ParseSystemCommand(command)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				r.Err = err.Error()
+				ws.WriteJSON(r)
+				ws.Close()
+				conn = nil
+				return
+			}
+			connectContext.Command = mapping.Command
+		}
+
 		tmp, err := initDockerConnection("tty")
 		sConn = tmp
 		if err != nil {
@@ -118,7 +144,7 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 			ws.Close()
 		}
 		// Listen message from docker service and send to client connection
-		go sendTTYMsgToClient(ws, sConn)
+		go sendTTYMsgToClient(ws, sConn, mapping)
 	}
 
 	if sConn == nil {
@@ -137,14 +163,19 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 }
 
 // SendMsgToClient send message to client
-func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
+func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn, mapping *PortMapping) {
 	type res struct {
 		Err string `json:"err"`
 		Msg string `json:"msg"`
 	}
+	type dockerMsg struct {
+		Msg  string `json:"msg"`
+		ID   string `json:"id"`
+		Type string `json:"type"`
+	}
 	for {
-		_, msg, err := sConn.ReadMessage()
-		fmt.Print(string(msg))
+		msg := &dockerMsg{}
+		err := sConn.ReadJSON(msg)
 		r := res{}
 		if err != nil {
 			// Server closed connection
@@ -153,7 +184,12 @@ func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn) {
 			cConn.Close()
 			return
 		}
-		r.Msg = string(msg)
+		// register for the first time
+		if mapping != nil {
+			RegisterPortAndDomainInfo(mapping, msg.ID)
+			mapping = nil
+		}
+		r.Msg = msg.Msg
 		cConn.WriteJSON(r)
 	}
 }
@@ -187,4 +223,10 @@ func handleTTYMessage(mType int, conn *websocket.Conn, isFirst bool, connectCont
 		return err
 	}
 	return nil
+}
+
+// RegisterPortAndDomainInfo register port
+// TODO: register, add to redis
+func RegisterPortAndDomainInfo(mapping *PortMapping, containName string) {
+
 }

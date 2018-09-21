@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -173,7 +174,7 @@ func CheckJWT(jwtString string) (bool, error) {
 		return false, nil
 	}
 
-	has, err := model.IsJWTExist(jwtString, RedisClient)
+	has, err := model.IsJWTExist(jwtString, AuthRedisClient)
 	return !has, err
 }
 
@@ -247,4 +248,24 @@ func GenerateJWT(username string) (string, error) {
 	})
 
 	return token.SignedString([]byte(JWTKey))
+}
+
+// ParseSystemCommand parse command start with go-online
+func ParseSystemCommand(command []string) (*PortMapping, error) {
+	for i := 0; i < len(command); i++ {
+		if len(command[i]) == 0 {
+			command = append(command[:i], command[i+1:]...)
+			i--
+		}
+	}
+	if len(command) < 0 || command[0] != "go-online" {
+		return nil, errors.New("Invalid command")
+	}
+	switch command[1] {
+	// map port
+	case "map":
+		return handleMapCommand(command[1:])
+	default:
+		return nil, errors.New("Invalid command")
+	}
 }

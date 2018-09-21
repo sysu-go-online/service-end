@@ -32,3 +32,10 @@ type RequestCommand struct {
 	username    string
 	projectType int
 }
+
+// PortMapping include messages to be used
+type PortMapping struct {
+	Port       int
+	DomainName string
+	Command    string
+}

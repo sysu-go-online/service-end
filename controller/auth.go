@@ -73,7 +73,7 @@ func LogOutHandler(w http.ResponseWriter, r *http.Request) error {
 			w.WriteHeader(401)
 			return nil
 		}
-		if err = model.AddInvalidJWT(token, RedisClient); err != nil {
+		if err = model.AddInvalidJWT(token, AuthRedisClient); err != nil {
 			return err
 		}
 		w.WriteHeader(200)
