@@ -252,9 +252,13 @@ func RegisterPortAndDomainInfo(mapping *types.PortMapping, containerName string)
 	if err != nil {
 		return err
 	}
+	DOMAINNAME := os.Getenv("DOMAIN_NAME")
+	if len(DOMAINNAME) != 0 {
+		DOMAINNAME = "." + DOMAINNAME
+	}
 	req := model.RegisterConsulParam{
 		Key:   mapping.DomainName,
-		Value: containerName,
+		Value: fmt.Sprintf("%s%s:%d", containerName, DOMAINNAME, mapping.Port),
 	}
 	return req.RegisterToConsul(url)
 }

@@ -15,6 +15,7 @@
 - REDIS_PORT redis端口，默认为6379
 - CONSUL_ADDRESS consul地址，默认为localhost
 - CONSUL_PORT consul端口，默认为8500
+- DOMAIN_NAME 域名，在映射时使用
 
 ## 依赖的外部软件
 
