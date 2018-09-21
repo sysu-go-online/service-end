@@ -13,6 +13,8 @@
 - DOCKER_PORT 容器服务端口，默认为8888
 - REDIS_ADDRESS redis地址，默认为localhost
 - REDIS_PORT redis端口，默认为6379
+- CONSUL_ADDRESS consul地址，默认为localhost
+- CONSUL_PORT consul端口，默认为8500
 
 ## 依赖的外部软件
 

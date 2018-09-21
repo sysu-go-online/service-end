@@ -26,7 +26,14 @@ type AuthResponse struct {
 }
 
 type ConfigFile struct {
-	ID     string `yaml:"ID"`
-	Secret string `yaml:"SECRET"`
+	ID       string `yaml:"ID"`
+	Secret   string `yaml:"SECRET"`
 	TokenKey string `yaml:"TOKEN_KEY"`
+}
+
+// PortMapping include messages to be used
+type PortMapping struct {
+	Port       int
+	DomainName string
+	Command    string
 }

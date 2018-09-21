@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sysu-go-online/service-end/model"
+	"github.com/sysu-go-online/service-end/types"
 )
 
 // WebSocketTermHandler is a middle way handler to connect web app with docker service
@@ -51,19 +52,15 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 
 // HandlerClientMsg handle message from client and send it to docker service
 func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, connectContext *RequestCommand) (conn *websocket.Conn) {
-	// Init the connection to the docker serveice
-	type res struct {
-		Err string `json:"err"`
-		Msg string `json:"msg"`
-	}
-	r := res{}
+	r := &TTYResponse{}
 	if *isFirst {
 		// check token
 		ok, username := GetUserNameFromToken(connectContext.JWT)
 		connectContext.username = username
 		if !ok {
 			fmt.Fprintln(os.Stderr, "Can not get user token information")
-			r.Err = "Invalid token"
+			r.Type = "error"
+			r.Msg = "Invalid token"
 			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
@@ -76,7 +73,8 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 		ok, err := u.GetWithUsername(session)
 		if !ok {
 			fmt.Fprintln(os.Stderr, "Can not get user information")
-			r.Err = "Invalid user information"
+			r.Type = "error"
+			r.Msg = "Invalid user information"
 			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
@@ -84,7 +82,8 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			r.Err = err.Error()
+			r.Type = "error"
+			r.Msg = err.Error()
 			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
@@ -94,7 +93,8 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 		has, err := p.GetWithUserIDAndName(session)
 		if !has {
 			fmt.Fprintln(os.Stderr, "Can not get project information")
-			r.Err = "Can not get project information"
+			r.Type = "error"
+			r.Msg = "Can not get project information"
 			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
@@ -102,7 +102,8 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			r.Err = err.Error()
+			r.Type = "error"
+			r.Msg = err.Error()
 			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
@@ -112,10 +113,11 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 
 		// Check if the command is system command
 		command := strings.Split(connectContext.Command, " ")
-		mapping := &PortMapping{}
+		mapping := &types.PortMapping{}
 		if len(command) <= 0 {
 			fmt.Fprintln(os.Stderr, "Can not parse command")
-			r.Err = "invalid command"
+			r.Type = "error"
+			r.Msg = "invalid command"
 			ws.WriteJSON(r)
 			ws.Close()
 			conn = nil
@@ -126,7 +128,8 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 			mapping, err = ParseSystemCommand(command)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
-				r.Err = err.Error()
+				r.Type = "error"
+				r.Msg = err.Error()
 				ws.WriteJSON(r)
 				ws.Close()
 				conn = nil
@@ -139,7 +142,8 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 		sConn = tmp
 		if err != nil {
 			fmt.Println("Can not connect to the docker service")
-			r.Err = "Server error"
+			r.Type = "error"
+			r.Msg = "Server error"
 			ws.WriteJSON(r)
 			ws.Close()
 		}
@@ -163,11 +167,7 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 }
 
 // SendMsgToClient send message to client
-func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn, mapping *PortMapping) {
-	type res struct {
-		Err string `json:"err"`
-		Msg string `json:"msg"`
-	}
+func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn, mapping *types.PortMapping) {
 	type dockerMsg struct {
 		Msg  string `json:"msg"`
 		ID   string `json:"id"`
@@ -176,19 +176,27 @@ func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn, mapping *P
 	for {
 		msg := &dockerMsg{}
 		err := sConn.ReadJSON(msg)
-		r := res{}
+		r := &TTYResponse{}
 		if err != nil {
 			// Server closed connection
-			r.Err = err.Error()
-			cConn.WriteJSON(r)
 			cConn.Close()
 			return
 		}
 		// register for the first time
 		if mapping != nil {
-			RegisterPortAndDomainInfo(mapping, msg.ID)
+			err := RegisterPortAndDomainInfo(mapping, msg.ID)
+			if err != nil {
+				fmt.Println(err)
+				r.Type = "error"
+				r.Msg = err.Error()
+				cConn.WriteJSON(r)
+			}
+			r.Type = "dname"
+			r.Msg = mapping.DomainName
+			cConn.WriteJSON(r)
 			mapping = nil
 		}
+		r.Type = "tty"
 		r.Msg = msg.Msg
 		cConn.WriteJSON(r)
 	}
@@ -226,7 +234,27 @@ func handleTTYMessage(mType int, conn *websocket.Conn, isFirst bool, connectCont
 }
 
 // RegisterPortAndDomainInfo register port
-// TODO: register, add to redis
-func RegisterPortAndDomainInfo(mapping *PortMapping, containName string) {
+func RegisterPortAndDomainInfo(mapping *types.PortMapping, containerName string) error {
+	CONSULADDRESS := os.Getenv("CONSUL_ADDRESS")
+	if len(CONSULADDRESS) == 0 {
+		CONSULADDRESS = "localhost"
+	}
+	CONSULPORT := os.Getenv("CONSUL_PORT")
+	if len(CONSULPORT) == 0 {
+		CONSULPORT = "8500"
+	}
+	if CONSULPORT[0] != ':' {
+		CONSULPORT = ":" + CONSULPORT
+	}
 
+	url := "http://" + CONSULADDRESS + CONSULPORT + "/v1/kv/upstreams/"
+	err := model.AddDomainName(mapping.DomainName, DomainNameRedisClient)
+	if err != nil {
+		return err
+	}
+	req := model.RegisterConsulParam{
+		Key:   mapping.DomainName,
+		Value: containerName,
+	}
+	return req.RegisterToConsul(url)
 }

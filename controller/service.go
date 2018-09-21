@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/satori/go.uuid"
+
 	"github.com/sysu-go-online/service-end/model"
 
 	"golang.org/x/crypto/bcrypt"
@@ -17,7 +19,6 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/websocket"
-	"github.com/rs/xid"
 	"github.com/sysu-go-online/service-end/types"
 )
 
@@ -159,9 +160,13 @@ func GenerateUserName() string {
 	return "user_" + generateUUID()
 }
 
+// TODO: return error
 func generateUUID() string {
-	guid := xid.New()
-	return guid.String()
+	id, err := uuid.NewV1()
+	if err != nil {
+		fmt.Println(err)
+	}
+	return id.String()
 }
 
 // CheckJWT check whether the jwt is valid and if it is in the invalid database
@@ -251,7 +256,7 @@ func GenerateJWT(username string) (string, error) {
 }
 
 // ParseSystemCommand parse command start with go-online
-func ParseSystemCommand(command []string) (*PortMapping, error) {
+func ParseSystemCommand(command []string) (*types.PortMapping, error) {
 	for i := 0; i < len(command); i++ {
 		if len(command[i]) == 0 {
 			command = append(command[:i], command[i+1:]...)

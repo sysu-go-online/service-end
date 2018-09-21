@@ -33,9 +33,8 @@ type RequestCommand struct {
 	projectType int
 }
 
-// PortMapping include messages to be used
-type PortMapping struct {
-	Port       int
-	DomainName string
-	Command    string
+// TTYResponse stores data to be sent to the client
+type TTYResponse struct {
+	Type string
+	Msg string `json:"msg"`
 }

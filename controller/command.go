@@ -6,13 +6,14 @@ import (
 	"strconv"
 
 	"github.com/sysu-go-online/service-end/model"
+	"github.com/sysu-go-online/service-end/types"
 )
 
-func handleMapCommand(command []string) (*PortMapping, error) {
+func handleMapCommand(command []string) (*types.PortMapping, error) {
 	if len(command) <= 0 || command[0] != "map" {
 		return nil, errors.New("Invalid map command")
 	}
-	mapping := PortMapping{}
+	mapping := types.PortMapping{}
 	// store which flag is un used
 	isUsed := make([]bool, len(command))
 	for i := 0; i < len(isUsed); i++ {
@@ -20,15 +21,14 @@ func handleMapCommand(command []string) (*PortMapping, error) {
 	}
 
 	// scan command
+	start := -1
 	for i := 1; i < len(command); i++ {
-		if command[i][0] == '"' {
-			if i != len(command)-1 {
-				return nil, errors.New("Invalid command")
-			}
-			break
-		}
 		if isUsed[i] {
 			continue
+		}
+		if command[i][0] != '-' {
+			start = i
+			break
 		}
 		switch command[i] {
 		case "-p":
@@ -48,6 +48,9 @@ func handleMapCommand(command []string) (*PortMapping, error) {
 			return nil, fmt.Errorf("Can not parse %s", command[i])
 		}
 	}
+	if start == -1 {
+		return nil, errors.New("can not get start up command")
+	}
 
 	if mapping.Port == 0 {
 		return nil, errors.New("Can not get port number")
@@ -66,17 +69,17 @@ func handleMapCommand(command []string) (*PortMapping, error) {
 				continue
 			} else {
 				mapping.DomainName = uuid
+				break
 			}
 		} else {
 			return nil, err
 		}
 	}
 	// parse command
-	userCommand := command[len(command)-1]
-	if userCommand[0] == '"' && userCommand[len(userCommand)-1] == '"' {
-		userCommand = userCommand[1 : len(userCommand)-1]
-		mapping.Command = userCommand
-		return &mapping, nil
+	var userCommand string
+	for i := start; i < len(command); i++ {
+		userCommand += command[i] + " "
 	}
-	return nil, errors.New("Invalid user command")
+	mapping.Command = userCommand
+	return &mapping, nil
 }
