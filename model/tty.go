@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -26,7 +27,7 @@ func AddDomainName(domainName string, client *redis.Client) error {
 func (r *RegisterConsulParam) RegisterToConsul(url string) error {
 	client := &http.Client{}
 	body := []byte(r.Value)
-	req, err := http.NewRequest("PUT", url + r.Key, bytes.NewBuffer(body))
+	req, err := http.NewRequest("PUT", url+r.Key, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
@@ -38,6 +39,7 @@ func (r *RegisterConsulParam) RegisterToConsul(url string) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(string(body))
 	// TODO: check response to see whether it is successful
 	defer res.Body.Close()
 	return nil
