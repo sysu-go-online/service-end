@@ -47,12 +47,16 @@ func WebSocketTermHandler(w http.ResponseWriter, r *http.Request) {
 		conn := handlerClientTTYMsg(&isFirst, ws, sConn, msgType, &msg)
 		sConn = conn
 	}
-	sConn.Close()
+	if sConn != nil {
+		sConn.Close()
+	}
 }
 
 // HandlerClientMsg handle message from client and send it to docker service
 func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Conn, msgType int, connectContext *RequestCommand) (conn *websocket.Conn) {
 	r := &TTYResponse{}
+	var mapping *types.PortMapping
+	mapping = nil
 	if *isFirst {
 		// check token
 		ok, username := GetUserNameFromToken(connectContext.JWT)
@@ -113,7 +117,6 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 
 		// Check if the command is system command
 		command := strings.Split(connectContext.Command, " ")
-		mapping := &types.PortMapping{}
 		if len(command) <= 0 {
 			fmt.Fprintln(os.Stderr, "Can not parse command")
 			r.Type = "error"
@@ -124,6 +127,7 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 			return
 		}
 		if command[0] == "go-online" {
+			mapping = &types.PortMapping{}
 			// parse command
 			mapping, err = ParseSystemCommand(command)
 			if err != nil {
@@ -160,7 +164,7 @@ func handlerClientTTYMsg(isFirst *bool, ws *websocket.Conn, sConn *websocket.Con
 	}
 
 	// Send message to docker service
-	handleTTYMessage(msgType, sConn, *isFirst, connectContext)
+	handleTTYMessage(msgType, sConn, *isFirst, connectContext, mapping)
 	*isFirst = false
 	conn = sConn
 	return
@@ -203,7 +207,7 @@ func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn, mapping *t
 }
 
 // HandleMessage decide different operation according to the given json message
-func handleTTYMessage(mType int, conn *websocket.Conn, isFirst bool, connectContext *RequestCommand) error {
+func handleTTYMessage(mType int, conn *websocket.Conn, isFirst bool, connectContext *RequestCommand, mapping *types.PortMapping) error {
 	var workSpace *Command
 	var err error
 	if isFirst {
@@ -218,6 +222,9 @@ func handleTTYMessage(mType int, conn *websocket.Conn, isFirst bool, connectCont
 			UserName:    username,
 			ProjectName: projectName,
 			Type:        "tty",
+		}
+		if mapping != nil {
+			workSpace.Ports = []int{mapping.Port}
 		}
 	}
 
@@ -258,7 +265,8 @@ func RegisterPortAndDomainInfo(mapping *types.PortMapping, containerName string)
 	}
 	req := model.RegisterConsulParam{
 		Key:   mapping.DomainName,
-		Value: fmt.Sprintf("%s%s:%d", containerName, DOMAINNAME, mapping.Port),
+		Value: fmt.Sprintf("%s%s:%d", containerName[0:12], DOMAINNAME, mapping.Port),
 	}
+	fmt.Println(url)
 	return req.RegisterToConsul(url)
 }

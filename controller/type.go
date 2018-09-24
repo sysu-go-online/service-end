@@ -13,6 +13,7 @@ type Command struct {
 	ProjectName string   `json:"project"`
 	Entrypoint  []string `json:"entrypoint"`
 	Type        string   `json:"type"`
+	Ports       []int    `json:"port"`
 }
 
 // ErrorHandler is error handler for http
@@ -36,5 +37,5 @@ type RequestCommand struct {
 // TTYResponse stores data to be sent to the client
 type TTYResponse struct {
 	Type string
-	Msg string `json:"msg"`
+	Msg  string `json:"msg"`
 }
