@@ -267,6 +267,5 @@ func RegisterPortAndDomainInfo(mapping *types.PortMapping, containerName string)
 		Key:   mapping.DomainName,
 		Value: fmt.Sprintf("%s%s:%d", containerName[0:12], DOMAINNAME, mapping.Port),
 	}
-	fmt.Println(url)
 	return req.RegisterToConsul(url)
 }
