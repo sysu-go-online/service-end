@@ -195,8 +195,14 @@ func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn, mapping *t
 				r.Msg = err.Error()
 				cConn.WriteJSON(r)
 			}
+			DOMAINNAME := os.Getenv("DOMAIN_NAME")
+			if len(DOMAINNAME) != 0 {
+				DOMAINNAME = "." + DOMAINNAME
+			} else {
+				DOMAINNAME = ".localhost"
+			}
 			r.Type = "dname"
-			r.Msg = mapping.DomainName
+			r.Msg = mapping.DomainName + DOMAINNAME
 			cConn.WriteJSON(r)
 			mapping = nil
 		}
