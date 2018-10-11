@@ -182,6 +182,7 @@ func sendTTYMsgToClient(cConn *websocket.Conn, sConn *websocket.Conn, mapping *t
 		err := sConn.ReadJSON(msg)
 		r := &TTYResponse{}
 		if err != nil {
+			fmt.Println(err)
 			// Server closed connection
 			cConn.Close()
 			return
@@ -238,7 +239,7 @@ func handleTTYMessage(mType int, conn *websocket.Conn, isFirst bool, connectCont
 	if isFirst {
 		err = conn.WriteJSON(*workSpace)
 	} else {
-		err = conn.WriteMessage(mType, []byte(connectContext.Command))
+		err = conn.WriteJSON(connectContext)
 	}
 	if err != nil {
 		return err
