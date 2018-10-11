@@ -233,6 +233,7 @@ func handleTTYMessage(mType int, conn *websocket.Conn, isFirst bool, connectCont
 		if mapping != nil {
 			workSpace.Ports = []int{mapping.Port}
 		}
+		fmt.Println(workSpace.ENV)
 	}
 
 	// Send message
