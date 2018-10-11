@@ -273,7 +273,7 @@ func RegisterPortAndDomainInfo(mapping *types.PortMapping, containerName string)
 	}
 	req := model.RegisterConsulParam{
 		Key:   mapping.DomainName,
-		Value: fmt.Sprintf("%s%s:%d", containerName[0:12], DOMAINNAME, mapping.Port),
+		Value: fmt.Sprintf("%s:%d", containerName[0:12], mapping.Port),
 	}
 	return req.RegisterToConsul(url)
 }
